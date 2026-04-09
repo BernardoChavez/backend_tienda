@@ -356,7 +356,7 @@ class RolViewSet(viewsets.ModelViewSet):
         }
         """
         rol = self.get_object()
-        serializer = self.get_serializer(data=request.data, partial=True)
+        serializer = self.get_serializer(rol, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         
         nombre = serializer.validated_data.get('name')
