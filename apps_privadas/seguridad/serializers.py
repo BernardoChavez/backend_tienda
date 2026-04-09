@@ -121,7 +121,19 @@ class RolActualizarSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = ['name', 'permisos_ids']
+        extra_kwargs = {
+            'name': {'validators': []}
+        }
     
+    def validate_name(self, value):
+        """Validar que el nombre no exista en otro rol (excluyendo la instancia actual)"""
+        instance = self.instance
+        if instance and Group.objects.filter(name=value).exclude(id=instance.id).exists():
+            raise serializers.ValidationError(f"Ya existe otro rol con el nombre '{value}'")
+        elif not instance and Group.objects.filter(name=value).exists():
+            raise serializers.ValidationError(f"Ya existe un rol con el nombre '{value}'")
+        return value
+
     def update(self, instance, validated_data):
         permisos = validated_data.pop('permisos_ids', None)
         
