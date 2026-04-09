@@ -29,14 +29,15 @@ class MultimedioViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        producto_id = serializer.validated_data.pop('producto_id')
-        producto = Producto.objects.get(id=producto_id)
+
+        data = serializer.validated_data
+        producto_id = data.pop('producto_id')
+
         instance = self.model.objects.create(
-            producto=producto,
-            **serializer.validated_data
+            producto_id=producto_id,
+            **data
         )
-        
+
         return Response(
             self.serializer_class(instance).data,
             status=status.HTTP_201_CREATED
@@ -46,17 +47,17 @@ class MultimedioViewSet(viewsets.ModelViewSet):
         instance = get_object_or_404(self.model, pk=kwargs.get('pk'))
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         data = serializer.validated_data.copy()
         producto_id = data.pop('producto_id', None)
-        
+
         if producto_id:
-            data['producto'] = Producto.objects.get(id=producto_id)
-        
+            data['producto_id'] = producto_id
+
         for key, value in data.items():
             setattr(instance, key, value)
         instance.save()
-        
+
         return Response(
             self.serializer_class(instance).data,
             status=status.HTTP_200_OK
