@@ -182,14 +182,16 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS Configuration para desarrollo (Postman, Angular, etc.)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",      # React en desarrollo
-    "http://localhost:4200",      # Angular en desarrollo
-    "http://localhost:8080",      # Vue/aplicaciones locales
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:4200",
-    "http://127.0.0.1:8080",
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",      # React en desarrollo
+#     "http://localhost:4200",      # Angular en desarrollo
+#     "http://localhost:8080",      # Vue/aplicaciones locales
+#     "http://127.0.0.1:3000",
+#     "http://127.0.0.1:4200",
+#     "http://127.0.0.1:8080",
+# ]
+
+CORS_ALLOW_ALL_ORIGINS = True  # Solo en desarrollo
 
 # Para producción, cambiar a:
 # CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS').split(',')
