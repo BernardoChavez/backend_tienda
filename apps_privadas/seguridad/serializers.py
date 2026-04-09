@@ -28,8 +28,8 @@ class CrearUsuarioSerializer(serializers.Serializer):
     grupo_id = serializers.IntegerField()
 
     def validate_username(self, value):
-        """Validar que username sea único"""
-        if Usuario.objects.filter(username=value).exists():
+        """Validar que username sea único (solo en usuarios activos)"""
+        if Usuario.objects.filter(username=value, is_active=True).exists():
             raise serializers.ValidationError(f"El usuario {value} ya existe")
         return value
 
@@ -51,8 +51,8 @@ class RegistrarClienteSerializer(serializers.Serializer):
     fecha_nacimiento = serializers.DateField()
 
     def validate_username(self, value):
-        """Validar que username sea único"""
-        if Usuario.objects.filter(username=value).exists():
+        """Validar que username sea único (solo en usuarios activos)"""
+        if Usuario.objects.filter(username=value, is_active=True).exists():
             raise serializers.ValidationError(f"El usuario {value} ya existe")
         return value
 

@@ -39,8 +39,8 @@ class UsuarioService:
                     'error': f'El grupo con ID {grupo_id} no existe'
                 }
 
-            # Verificar que el username sea único
-            if Usuario.objects.filter(username=username).exists():
+            # Verificar que el username sea único (solo en usuarios activos)
+            if Usuario.objects.filter(username=username, is_active=True).exists():
                 return {
                     'success': False,
                     'error': f'El usuario {username} ya existe'
@@ -231,8 +231,8 @@ class ClienteService:
                     'error': 'Nombre, apellido y fecha de nacimiento son obligatorios'
                 }
 
-            # Verificar que el username sea único
-            if Usuario.objects.filter(username=username).exists():
+            # Verificar que el username sea único (solo en usuarios activos)
+            if Usuario.objects.filter(username=username, is_active=True).exists():
                 return {
                     'success': False,
                     'error': f'El usuario {username} ya existe'
