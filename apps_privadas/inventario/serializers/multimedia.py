@@ -11,6 +11,30 @@ class MultimedioSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class MultimedioConArchivoSerializer(serializers.Serializer):
+    archivo = serializers.FileField()
+    tipo = serializers.ChoiceField(choices=Multimedio.TIPO_CHOICES, default='imagen')
+    es_principal = serializers.BooleanField(default=False)
+    orden = serializers.IntegerField(default=0)
+    producto_id = serializers.IntegerField()
+
+    def validate_producto_id(self, value):
+        from apps_privadas.inventario.models import Producto
+        if not Producto.objects.filter(id=value).exists():
+            raise serializers.ValidationError(f'El producto con ID {value} no existe')
+        return value
+
+    def validate(self, data):
+        if data.get('tipo') == 'realidad_aumentada':
+            from apps_privadas.inventario.models import Multimedio
+            producto_id = data.get('producto_id')
+            if Multimedio.objects.filter(producto_id=producto_id, tipo='realidad_aumentada').exists():
+                raise serializers.ValidationError({
+                    'tipo': 'Este producto ya tiene un archivo de realidad aumentada'
+                })
+        return data
+
+
 class CrearMultimedioSerializer(serializers.Serializer):
     nombre = serializers.CharField(max_length=255)
     archivo_url = serializers.URLField(max_length=500)

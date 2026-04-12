@@ -1,14 +1,25 @@
 from rest_framework import serializers
-from apps_privadas.inventario.models import Producto, Categoria
+from apps_privadas.inventario.models import Producto, Categoria, Multimedio
+
+
+class MultimedioSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Multimedio
+        fields = ['id', 'nombre', 'archivo_url', 'es_principal', 'orden']
 
 
 class ProductoSerializer(serializers.ModelSerializer):
     categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    imagenes = serializers.SerializerMethodField()
 
     class Meta:
         model = Producto
-        fields = ['id', 'codigo', 'nombre', 'precio', 'categoria', 'categoria_nombre']
+        fields = ['id', 'codigo', 'nombre', 'precio', 'categoria', 'categoria_nombre', 'imagenes']
         read_only_fields = ['id']
+
+    def get_imagenes(self, obj):
+        multimedia = Multimedio.objects.filter(producto=obj, tipo='imagen')
+        return MultimedioSimpleSerializer(multimedia, many=True).data
 
 
 class CrearProductoSerializer(serializers.Serializer):
