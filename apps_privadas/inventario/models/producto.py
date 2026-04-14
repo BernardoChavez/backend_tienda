@@ -1,5 +1,6 @@
 from django.db import models
-from apps_privadas.inventario.models import Categoria
+from apps_privadas.inventario.models.categoria import Categoria
+from apps_privadas.inventario.models.proveedor import Proveedor
 
 
 class Producto(models.Model):
@@ -9,6 +10,13 @@ class Producto(models.Model):
     categoria = models.ForeignKey(
         Categoria,
         on_delete=models.CASCADE,
+        related_name='productos'
+    )
+    proveedor = models.ForeignKey(
+        Proveedor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='productos'
     )
 

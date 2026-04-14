@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
-from apps_privadas.inventario.models import Producto, Categoria, Multimedio
+from apps_privadas.inventario.models import Producto, Categoria, Multimedio, Proveedor
 from apps_privadas.inventario.serializers import (
     ProductoSerializer,
     CrearProductoSerializer,
@@ -25,8 +25,13 @@ class ProductoViewSet(BaseViewSet):
         
         categoria_id = serializer.validated_data.pop('categoria_id')
         categoria = Categoria.objects.get(id=categoria_id)
+        
+        proveedor_id = serializer.validated_data.pop('proveedor_id', None)
+        proveedor = Proveedor.objects.get(id=proveedor_id) if proveedor_id else None
+
         instance = self.model.objects.create(
             categoria=categoria,
+            proveedor=proveedor,
             **serializer.validated_data
         )
         
@@ -42,9 +47,14 @@ class ProductoViewSet(BaseViewSet):
         
         data = serializer.validated_data.copy()
         categoria_id = data.pop('categoria_id', None)
+        proveedor_id = data.pop('proveedor_id', None)
         
         if categoria_id:
             data['categoria'] = Categoria.objects.get(id=categoria_id)
+            
+        if 'proveedor_id' in serializer.initial_data or proveedor_id is not None:
+            # Si el proveedor_id se pasó en el request, lo actualizamos.
+            data['proveedor'] = Proveedor.objects.get(id=proveedor_id) if proveedor_id else None
         
         for key, value in data.items():
             setattr(instance, key, value)

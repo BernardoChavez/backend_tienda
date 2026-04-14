@@ -14,6 +14,11 @@ from apps_privadas.inventario.serializers.multimedia import (
     ActualizarMultimedioSerializer,
     MultimedioConArchivoSerializer
 )
+from apps_privadas.inventario.serializers.proveedor import (
+    ProveedorSerializer,
+    CrearProveedorSerializer,
+    ActualizarProveedorSerializer
+)
 
 __all__ = [
     'CategoriaSerializer',
@@ -24,6 +29,9 @@ __all__ = [
     'ActualizarProductoSerializer',
     'MultimedioSerializer',
     'CrearMultimedioSerializer',
-    'ActualizarMultimedioSerializer'
-    'MultimedioConArchivoSerializer'
+    'ActualizarMultimedioSerializer',
+    'MultimedioConArchivoSerializer',
+    'ProveedorSerializer',
+    'CrearProveedorSerializer',
+    'ActualizarProveedorSerializer'
 ]
