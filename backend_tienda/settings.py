@@ -58,6 +58,7 @@ TENANT_APPS = [
     'apps_privadas.inventario',
     'rest_framework',
     'rest_framework_simplejwt',
+    'drf_spectacular',
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
@@ -75,6 +76,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,  # 10 resultados por página
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # Configuración de JWT
@@ -207,3 +209,13 @@ CLOUDINARY_API_SECRET = env('CLOUDINARY_API_SECRET', default=None)
 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Configuración de Swagger (drf-spectacular)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Backend Tienda API',
+    'DESCRIPTION': 'API de gestión de tienda multi-tenant',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': '/api/',
+}
+

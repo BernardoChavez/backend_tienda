@@ -18,6 +18,7 @@ from apps_privadas.seguridad.serializers import (
 )
 from apps_privadas.seguridad.login_serializers import LoginSerializer
 from apps_privadas.seguridad.services import UsuarioService, ClienteService, RolService, PermisoService
+from apps_privadas.seguridad.permissions import HasModelPermission
 
 
 @api_view(['POST'])
@@ -35,11 +36,14 @@ def login(request):
     Respuesta exitosa (200):
     {
         "success": true,
-        "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "access": "eyJ0eXAi...",  ← Token corto (sin datos adicionales)
+        "refresh": "eyJ0eXAi...",
         "usuario_id": 1,
         "username": "usuario",
-        "nombre_completo": "Juan Pérez"
+        "nombre_completo": "Juan Pérez",
+        "is_superuser": false,
+        "roles": ["Vendedor"],
+        "permisos": ["inventario.view_producto", "inventario.add_producto", ...]
     }
 
     Respuesta error (400):
@@ -53,20 +57,36 @@ def login(request):
     if serializer.is_valid():
         usuario = serializer.validated_data['usuario']
 
-        # Generar tokens JWT
+        # Generar tokens JWT (sin agregar datos, se mantienen cortos y seguros)
         refresh = RefreshToken.for_user(usuario)
-
-        # Agregar información personalizada a los tokens
-        refresh['usuario_id'] = usuario.id
-        refresh['username'] = usuario.username
-        refresh['nombre_completo'] = usuario.nombre_completo
-
         access = refresh.access_token
-        access['usuario_id'] = usuario.id
-        access['username'] = usuario.username
-        access['nombre_completo'] = usuario.nombre_completo
+
+        # Obtener roles del usuario
+        roles = list(usuario.groups.values_list('name', flat=True))
+        
+        # Obtener permisos del usuario
+        permisos = []
+        if usuario.is_superuser:
+            # Si es superuser, tiene todos los permisos
+            permisos = ['*']  # Wildcard para indicar todos los permisos
+        else:
+            # Obtener permisos del usuario (directos + de grupos)
+            permisos = list(
+                usuario.user_permissions.values_list('content_type__app_label', 'codename')
+            )
+            # Agregar permisos de grupos
+            permisos += list(
+                Permission.objects.filter(
+                    group__user=usuario
+                ).values_list('content_type__app_label', 'codename').distinct()
+            )
+            # Formatear como "app.permiso"
+            permisos = [f'{app}.{perm}' for app, perm in permisos]
+            permisos = list(set(permisos))  # Eliminar duplicados
 
         print(f"✓ Login exitoso: {usuario.username} (ID: {usuario.id})")
+        print(f"  Roles: {roles}")
+        print(f"  Permisos: {len(permisos)} permisos")
 
         return Response({
             'success': True,
@@ -74,7 +94,10 @@ def login(request):
             'refresh': str(refresh),
             'usuario_id': usuario.id,
             'username': usuario.username,
-            'nombre_completo': usuario.nombre_completo
+            'nombre_completo': usuario.nombre_completo,
+            'is_superuser': usuario.is_superuser,
+            'roles': roles,
+            'permisos': permisos
         }, status=status.HTTP_200_OK)
 
     else:
@@ -102,7 +125,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     queryset = Usuario.objects.filter(is_active=True)
     serializer_class = UsuarioSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModelPermission]
 
     def get_serializer_class(self):
         """Retorna el serializer según la acción"""
@@ -119,7 +142,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         if self.action == 'registrar_cliente':
             permission_classes = [AllowAny]  # Registro público
         else:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [IsAuthenticated, HasModelPermission]
 
         return [permission() for permission in permission_classes]
 
@@ -279,7 +302,7 @@ class RolViewSet(viewsets.ModelViewSet):
     """
     
     queryset = Group.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModelPermission]
     
     def get_serializer_class(self):
         """Retorna el serializer según la acción"""
