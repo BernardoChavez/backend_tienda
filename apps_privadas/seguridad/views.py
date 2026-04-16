@@ -14,10 +14,13 @@ from apps_privadas.seguridad.serializers import (
     RolListSerializer,
     RolCrearSerializer,
     RolActualizarSerializer,
-    PermisoSerializer
+    PermisoSerializer,
+    SolicitarRecuperacionSerializer,
+    VerificarCodigoSerializer,
+    CambiarPasswordSerializer,
 )
 from apps_privadas.seguridad.login_serializers import LoginSerializer
-from apps_privadas.seguridad.services import UsuarioService, ClienteService, RolService, PermisoService
+from apps_privadas.seguridad.services import UsuarioService, ClienteService, RolService, PermisoService, RecuperacionPasswordService
 from apps_privadas.seguridad.permissions import HasModelPermission
 
 
@@ -110,6 +113,72 @@ def login(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def solicitar_recuperacion(request):
+    """
+    Paso 1: El usuario ingresa su email para recibir el código.
+
+    Body: { "email": "usuario@ejemplo.com" }
+    Respuesta: { "success": true, "mensaje": "..." }
+    """
+    serializer = SolicitarRecuperacionSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'success': False, 'error': list(serializer.errors.values())[0][0]},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    resultado = RecuperacionPasswordService.solicitar_recuperacion(
+        username=serializer.validated_data['username']
+    )
+    http_status = status.HTTP_200_OK if resultado['success'] else status.HTTP_400_BAD_REQUEST
+    return Response(resultado, status=http_status)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verificar_codigo(request):
+    """
+    Paso 2: El usuario ingresa el código recibido. El sistema valida si es correcto.
+
+    Body: { "email": "usuario@ejemplo.com", "codigo": "AB12CD34" }
+    Respuesta: { "success": true, "mensaje": "Código verificado correctamente" }
+    """
+    serializer = VerificarCodigoSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'success': False, 'error': list(serializer.errors.values())[0][0]},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    resultado = RecuperacionPasswordService.verificar_codigo(
+        username=serializer.validated_data['username'],
+        codigo=serializer.validated_data['codigo']
+    )
+    http_status = status.HTTP_200_OK if resultado['success'] else status.HTTP_400_BAD_REQUEST
+    return Response(resultado, status=http_status)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def cambiar_password(request):
+    """
+    Paso 3: El usuario ingresa el código + nueva contraseña. El sistema actualiza la contraseña.
+
+    Body: { "email": "usuario@ejemplo.com", "codigo": "AB12CD34", "nueva_password": "NuevaPass123!" }
+    Respuesta: { "success": true, "mensaje": "Contraseña actualizada correctamente" }
+    """
+    serializer = CambiarPasswordSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'success': False, 'error': list(serializer.errors.values())[0][0]},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    resultado = RecuperacionPasswordService.cambiar_password(
+        username=serializer.validated_data['username'],
+        codigo=serializer.validated_data['codigo'],
+        nueva_password=serializer.validated_data['nueva_password']
+    )
+    http_status = status.HTTP_200_OK if resultado['success'] else status.HTTP_400_BAD_REQUEST
+    return Response(resultado, status=http_status)
+
+
 class UsuarioViewSet(viewsets.ModelViewSet):
     """
     ViewSet para CRUD de usuarios.
@@ -163,7 +232,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         resultado = UsuarioService.crear_usuario(
             username=serializer.validated_data['username'],
             password=serializer.validated_data['password'],
-            grupo_id=serializer.validated_data['grupo_id']
+            grupo_id=serializer.validated_data['grupo_id'],
+            email=serializer.validated_data.get('email')
         )
 
         if resultado['success']:
@@ -187,7 +257,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         resultado = UsuarioService.actualizar_usuario(
             usuario_id=pk,
             password=serializer.validated_data.get('password'),
-            grupo_id=serializer.validated_data.get('grupo_id')
+            grupo_id=serializer.validated_data.get('grupo_id'),
+            email=serializer.validated_data.get('email')
         )
 
         if resultado['success']:

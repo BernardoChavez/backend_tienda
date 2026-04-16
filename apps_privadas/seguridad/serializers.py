@@ -26,6 +26,7 @@ class CrearUsuarioSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True, min_length=8)
     grupo_id = serializers.IntegerField()
+    email = serializers.EmailField(required=False, allow_blank=True)
 
     def validate_username(self, value):
         """Validar que username sea único (solo en usuarios activos)"""
@@ -39,6 +40,7 @@ class ActualizarUsuarioSerializer(serializers.Serializer):
 
     password = serializers.CharField(write_only=True, min_length=8, required=False)
     grupo_id = serializers.IntegerField(required=False)
+    email = serializers.EmailField(required=False, allow_blank=True)
 
 
 class RegistrarClienteSerializer(serializers.Serializer):
@@ -55,6 +57,25 @@ class RegistrarClienteSerializer(serializers.Serializer):
         if Usuario.objects.filter(username=value, is_active=True).exists():
             raise serializers.ValidationError(f"El usuario {value} ya existe")
         return value
+
+
+# ============================================================================
+# SERIALIZERS PARA RECUPERACIÓN DE CONTRASEÑA
+# ============================================================================
+
+class SolicitarRecuperacionSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+
+
+class VerificarCodigoSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    codigo = serializers.CharField(max_length=8, min_length=6)
+
+
+class CambiarPasswordSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    codigo = serializers.CharField(max_length=8, min_length=6)
+    nueva_password = serializers.CharField(write_only=True, min_length=8)
 
 
 # ============================================================================
