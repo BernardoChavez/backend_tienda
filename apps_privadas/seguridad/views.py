@@ -14,10 +14,14 @@ from apps_privadas.seguridad.serializers import (
     RolListSerializer,
     RolCrearSerializer,
     RolActualizarSerializer,
-    PermisoSerializer
+    PermisoSerializer,
+    SolicitarRecuperacionSerializer,
+    VerificarCodigoSerializer,
+    CambiarPasswordSerializer,
 )
 from apps_privadas.seguridad.login_serializers import LoginSerializer
-from apps_privadas.seguridad.services import UsuarioService, ClienteService, RolService, PermisoService
+from apps_privadas.seguridad.services import UsuarioService, ClienteService, RolService, PermisoService, RecuperacionPasswordService
+from apps_privadas.seguridad.permissions import HasModelPermission
 
 
 @api_view(['POST'])
@@ -35,11 +39,14 @@ def login(request):
     Respuesta exitosa (200):
     {
         "success": true,
-        "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "access": "eyJ0eXAi...",  ← Token corto (sin datos adicionales)
+        "refresh": "eyJ0eXAi...",
         "usuario_id": 1,
         "username": "usuario",
-        "nombre_completo": "Juan Pérez"
+        "nombre_completo": "Juan Pérez",
+        "is_superuser": false,
+        "roles": ["Vendedor"],
+        "permisos": ["inventario.view_producto", "inventario.add_producto", ...]
     }
 
     Respuesta error (400):
@@ -53,20 +60,36 @@ def login(request):
     if serializer.is_valid():
         usuario = serializer.validated_data['usuario']
 
-        # Generar tokens JWT
+        # Generar tokens JWT (sin agregar datos, se mantienen cortos y seguros)
         refresh = RefreshToken.for_user(usuario)
-
-        # Agregar información personalizada a los tokens
-        refresh['usuario_id'] = usuario.id
-        refresh['username'] = usuario.username
-        refresh['nombre_completo'] = usuario.nombre_completo
-
         access = refresh.access_token
-        access['usuario_id'] = usuario.id
-        access['username'] = usuario.username
-        access['nombre_completo'] = usuario.nombre_completo
+
+        # Obtener roles del usuario
+        roles = list(usuario.groups.values_list('name', flat=True))
+        
+        # Obtener permisos del usuario
+        permisos = []
+        if usuario.is_superuser:
+            # Si es superuser, tiene todos los permisos
+            permisos = ['*']  # Wildcard para indicar todos los permisos
+        else:
+            # Obtener permisos del usuario (directos + de grupos)
+            permisos = list(
+                usuario.user_permissions.values_list('content_type__app_label', 'codename')
+            )
+            # Agregar permisos de grupos
+            permisos += list(
+                Permission.objects.filter(
+                    group__user=usuario
+                ).values_list('content_type__app_label', 'codename').distinct()
+            )
+            # Formatear como "app.permiso"
+            permisos = [f'{app}.{perm}' for app, perm in permisos]
+            permisos = list(set(permisos))  # Eliminar duplicados
 
         print(f"✓ Login exitoso: {usuario.username} (ID: {usuario.id})")
+        print(f"  Roles: {roles}")
+        print(f"  Permisos: {len(permisos)} permisos")
 
         return Response({
             'success': True,
@@ -74,7 +97,10 @@ def login(request):
             'refresh': str(refresh),
             'usuario_id': usuario.id,
             'username': usuario.username,
-            'nombre_completo': usuario.nombre_completo
+            'nombre_completo': usuario.nombre_completo,
+            'is_superuser': usuario.is_superuser,
+            'roles': roles,
+            'permisos': permisos
         }, status=status.HTTP_200_OK)
 
     else:
@@ -85,6 +111,72 @@ def login(request):
             if serializer.errors.get('non_field_errors')
             else list(serializer.errors.values())[0][0] if serializer.errors else 'Error desconocido'
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def solicitar_recuperacion(request):
+    """
+    Paso 1: El usuario ingresa su email para recibir el código.
+
+    Body: { "email": "usuario@ejemplo.com" }
+    Respuesta: { "success": true, "mensaje": "..." }
+    """
+    serializer = SolicitarRecuperacionSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'success': False, 'error': list(serializer.errors.values())[0][0]},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    resultado = RecuperacionPasswordService.solicitar_recuperacion(
+        username=serializer.validated_data['username']
+    )
+    http_status = status.HTTP_200_OK if resultado['success'] else status.HTTP_400_BAD_REQUEST
+    return Response(resultado, status=http_status)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verificar_codigo(request):
+    """
+    Paso 2: El usuario ingresa el código recibido. El sistema valida si es correcto.
+
+    Body: { "email": "usuario@ejemplo.com", "codigo": "AB12CD34" }
+    Respuesta: { "success": true, "mensaje": "Código verificado correctamente" }
+    """
+    serializer = VerificarCodigoSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'success': False, 'error': list(serializer.errors.values())[0][0]},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    resultado = RecuperacionPasswordService.verificar_codigo(
+        username=serializer.validated_data['username'],
+        codigo=serializer.validated_data['codigo']
+    )
+    http_status = status.HTTP_200_OK if resultado['success'] else status.HTTP_400_BAD_REQUEST
+    return Response(resultado, status=http_status)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def cambiar_password(request):
+    """
+    Paso 3: El usuario ingresa el código + nueva contraseña. El sistema actualiza la contraseña.
+
+    Body: { "email": "usuario@ejemplo.com", "codigo": "AB12CD34", "nueva_password": "NuevaPass123!" }
+    Respuesta: { "success": true, "mensaje": "Contraseña actualizada correctamente" }
+    """
+    serializer = CambiarPasswordSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'success': False, 'error': list(serializer.errors.values())[0][0]},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    resultado = RecuperacionPasswordService.cambiar_password(
+        username=serializer.validated_data['username'],
+        codigo=serializer.validated_data['codigo'],
+        nueva_password=serializer.validated_data['nueva_password']
+    )
+    http_status = status.HTTP_200_OK if resultado['success'] else status.HTTP_400_BAD_REQUEST
+    return Response(resultado, status=http_status)
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -102,7 +194,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     queryset = Usuario.objects.filter(is_active=True)
     serializer_class = UsuarioSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModelPermission]
 
     def get_serializer_class(self):
         """Retorna el serializer según la acción"""
@@ -119,7 +211,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         if self.action == 'registrar_cliente':
             permission_classes = [AllowAny]  # Registro público
         else:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [IsAuthenticated, HasModelPermission]
 
         return [permission() for permission in permission_classes]
 
@@ -140,7 +232,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         resultado = UsuarioService.crear_usuario(
             username=serializer.validated_data['username'],
             password=serializer.validated_data['password'],
-            grupo_id=serializer.validated_data['grupo_id']
+            grupo_id=serializer.validated_data['grupo_id'],
+            email=serializer.validated_data.get('email')
         )
 
         if resultado['success']:
@@ -164,7 +257,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         resultado = UsuarioService.actualizar_usuario(
             usuario_id=pk,
             password=serializer.validated_data.get('password'),
-            grupo_id=serializer.validated_data.get('grupo_id')
+            grupo_id=serializer.validated_data.get('grupo_id'),
+            email=serializer.validated_data.get('email')
         )
 
         if resultado['success']:
@@ -279,7 +373,7 @@ class RolViewSet(viewsets.ModelViewSet):
     """
     
     queryset = Group.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModelPermission]
     
     def get_serializer_class(self):
         """Retorna el serializer según la acción"""

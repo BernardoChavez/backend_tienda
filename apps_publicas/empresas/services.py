@@ -2,6 +2,7 @@ from django.db import transaction
 from apps_publicas.empresas.models import Empresa, Dominio
 from apps_privadas.seguridad.models import Usuario
 import re
+import os
 
 
 class EmpresaRegistroService:
@@ -58,8 +59,10 @@ class EmpresaRegistroService:
         # Remover guiones al inicio o final
         dominio = dominio.strip('-')
 
+        dominio_base = os.environ.get('BASE_DOMAIN', 'localhost')
+
         # En desarrollo usa .localhost, en producción cambiar
-        return f"{dominio}.localhost"
+        return f"{dominio}.{dominio_base}"
 
     @staticmethod
     @transaction.atomic
