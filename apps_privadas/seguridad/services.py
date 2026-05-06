@@ -3,15 +3,21 @@ Servicios para gestionar usuarios y clientes.
 Contiene toda la lógica de negocio para CRUD de usuarios y registro de clientes.
 """
 
+import random
+import string
 from django.contrib.auth.models import Group
-from apps_privadas.seguridad.models import Usuario
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
+from apps_privadas.seguridad.models import Usuario, CodigoRecuperacion
 
 
 class UsuarioService:
     """Servicio para operaciones CRUD de usuarios"""
 
     @staticmethod
-    def crear_usuario(username, password, grupo_id):
+    def crear_usuario(username, password, grupo_id, email=None):
         """
         Crea un nuevo usuario.
 
@@ -49,7 +55,8 @@ class UsuarioService:
             # Crear el usuario
             usuario = Usuario.objects.create_user(
                 username=username,
-                password=password
+                password=password,
+                email=email or ''
             )
 
             # Asignar al grupo
@@ -74,7 +81,7 @@ class UsuarioService:
             }
 
     @staticmethod
-    def actualizar_usuario(usuario_id, password=None, grupo_id=None):
+    def actualizar_usuario(usuario_id, password=None, grupo_id=None, email=None):
         """
         Actualiza un usuario.
 
@@ -100,6 +107,10 @@ class UsuarioService:
                     'success': False,
                     'error': f'El usuario con ID {usuario_id} no existe'
                 }
+
+            # Actualizar email si se proporciona
+            if email is not None:
+                usuario.email = email
 
             # Actualizar contraseña si se proporciona
             if password:
@@ -168,6 +179,7 @@ class UsuarioService:
             resultado.append({
                 'id': usuario.id,
                 'username': usuario.username,
+                'email': usuario.email,
                 'nombre': usuario.nombre,
                 'apellido': usuario.apellido,
                 'grupos': grupos,
@@ -425,6 +437,198 @@ class RolService:
             return {
                 'success': False,
                 'error': f'Error eliminando rol: {str(e)}'
+            }
+
+
+class RecuperacionPasswordService:
+    """Servicio para recuperación de contraseña vía email con código aleatorio"""
+
+    EXPIRACION_MINUTOS = 15
+    LONGITUD_CODIGO = 8
+
+    @staticmethod
+    def _generar_codigo():
+        """Genera un código alfanumérico aleatorio en mayúsculas"""
+        caracteres = string.ascii_uppercase + string.digits
+        return ''.join(random.choices(caracteres, k=RecuperacionPasswordService.LONGITUD_CODIGO))
+
+    @staticmethod
+    def solicitar_recuperacion(username):
+        """
+        Paso 1: Recibe el username, busca su email y envía el código.
+
+        Returns:
+            dict: {'success': bool, 'mensaje': str, 'error': str}
+        """
+        try:
+            try:
+                usuario = Usuario.objects.get(username=username, is_active=True)
+            except Usuario.DoesNotExist:
+                return {
+                    'success': False,
+                    'error': 'No existe un usuario activo con ese nombre de usuario'
+                }
+
+            if not usuario.email:
+                return {
+                    'success': False,
+                    'error': 'El usuario no tiene un correo registrado'
+                }
+
+            # Invalidar códigos anteriores pendientes
+            CodigoRecuperacion.objects.filter(
+                usuario=usuario,
+                usado=False
+            ).update(usado=True)
+
+            # Generar nuevo código
+            codigo = RecuperacionPasswordService._generar_codigo()
+            expira_en = timezone.now() + timedelta(
+                minutes=RecuperacionPasswordService.EXPIRACION_MINUTOS
+            )
+
+            CodigoRecuperacion.objects.create(
+                usuario=usuario,
+                codigo=codigo,
+                expira_en=expira_en
+            )
+
+            # Enviar correo
+            send_mail(
+                subject='Código de recuperación de contraseña',
+                message=(
+                    f'Hola {usuario.nombre or usuario.username},\n\n'
+                    f'Tu código de recuperación es:\n\n'
+                    f'  {codigo}\n\n'
+                    f'Este código expira en {RecuperacionPasswordService.EXPIRACION_MINUTOS} minutos.\n'
+                    f'Si no solicitaste este código, ignora este mensaje.'
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[usuario.email],
+                fail_silently=False,
+            )
+
+            print(f"✓ Código de recuperación enviado a {usuario.email}")
+
+            # Ocultar parte del email por seguridad (ej: hr****@gmail.com)
+            email = usuario.email
+            partes = email.split('@')
+            email_oculto = partes[0][:2] + '****@' + partes[1]
+
+            return {
+                'success': True,
+                'mensaje': f'Se envió un código de recuperación a {email_oculto}'
+            }
+
+        except Exception as e:
+            print(f"❌ Error enviando código de recuperación: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Error al enviar el correo: {str(e)}'
+            }
+
+    @staticmethod
+    def verificar_codigo(username, codigo):
+        """
+        Paso 2: Verifica que el código ingresado sea válido y no haya expirado.
+
+        Returns:
+            dict: {'success': bool, 'mensaje': str, 'error': str}
+        """
+        try:
+            try:
+                usuario = Usuario.objects.get(username=username, is_active=True)
+            except Usuario.DoesNotExist:
+                return {
+                    'success': False,
+                    'error': 'No existe un usuario activo con ese nombre de usuario'
+                }
+
+            registro = CodigoRecuperacion.objects.filter(
+                usuario=usuario,
+                codigo=codigo.upper(),
+                usado=False
+            ).order_by('-creado_en').first()
+
+            if not registro:
+                return {
+                    'success': False,
+                    'error': 'Código inválido o ya utilizado'
+                }
+
+            if not registro.esta_vigente():
+                return {
+                    'success': False,
+                    'error': 'El código ha expirado, solicita uno nuevo'
+                }
+
+            return {
+                'success': True,
+                'mensaje': 'Código verificado correctamente'
+            }
+
+        except Exception as e:
+            print(f"❌ Error verificando código: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Error al verificar el código: {str(e)}'
+            }
+
+    @staticmethod
+    def cambiar_password(username, codigo, nueva_password):
+        """
+        Paso 3: Verifica el código y actualiza la contraseña del usuario.
+
+        Returns:
+            dict: {'success': bool, 'mensaje': str, 'error': str}
+        """
+        try:
+            try:
+                usuario = Usuario.objects.get(username=username, is_active=True)
+            except Usuario.DoesNotExist:
+                return {
+                    'success': False,
+                    'error': 'No existe un usuario activo con ese nombre de usuario'
+                }
+
+            registro = CodigoRecuperacion.objects.filter(
+                usuario=usuario,
+                codigo=codigo.upper(),
+                usado=False
+            ).order_by('-creado_en').first()
+
+            if not registro:
+                return {
+                    'success': False,
+                    'error': 'Código inválido o ya utilizado'
+                }
+
+            if not registro.esta_vigente():
+                return {
+                    'success': False,
+                    'error': 'El código ha expirado, solicita uno nuevo'
+                }
+
+            # Cambiar contraseña
+            usuario.set_password(nueva_password)
+            usuario.save()
+
+            # Marcar código como usado
+            registro.usado = True
+            registro.save()
+
+            print(f"✓ Contraseña cambiada para {usuario.username}")
+
+            return {
+                'success': True,
+                'mensaje': 'Contraseña actualizada correctamente'
+            }
+
+        except Exception as e:
+            print(f"❌ Error cambiando contraseña: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Error al cambiar la contraseña: {str(e)}'
             }
 
 
