@@ -137,6 +137,8 @@ WSGI_APPLICATION = 'backend_tienda.wsgi.application'
 
 # backend_tienda/settings.py
 
+# backend_tienda/settings.py
+
 DATABASES = {
     'default': {
         'ENGINE': 'django_tenants.postgresql_backend',
@@ -144,12 +146,12 @@ DATABASES = {
         'USER': env('DB_USER'),
         'PASSWORD': env('DB_PASSWORD'),
         'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
+        'PORT': env('DB_PORT', default='5432'),
         'OPTIONS': {
             'sslmode': 'require',  # ESTA LÍNEA ES OBLIGATORIA PARA NEON
         }
     }
-}
+}   
 
 DATABASE_ROUTERS = (
     'django_tenants.routers.TenantSyncRouter',
