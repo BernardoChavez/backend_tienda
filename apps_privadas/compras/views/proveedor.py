@@ -1,11 +1,12 @@
 from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
-from apps_privadas.inventario.models import Proveedor
-from apps_privadas.inventario.serializers import (
+from apps_privadas.compras.models import Proveedor
+from apps_privadas.compras.serializers import (
     ProveedorSerializer,
     CrearProveedorSerializer,
     ActualizarProveedorSerializer
 )
+
 
 class ProveedorViewSet(viewsets.ModelViewSet):
     queryset = Proveedor.objects.all()

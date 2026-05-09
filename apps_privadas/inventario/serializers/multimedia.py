@@ -7,7 +7,7 @@ class MultimedioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Multimedio
-        fields = ['id', 'nombre', 'archivo_url', 'tipo', 'es_principal', 'orden', 'producto', 'producto_nombre']
+        fields = ['id', 'archivo_url', 'tipo', 'orden', 'es_principal', 'producto', 'producto_nombre']
         read_only_fields = ['id']
 
 
@@ -26,7 +26,6 @@ class MultimedioConArchivoSerializer(serializers.Serializer):
 
     def validate(self, data):
         if data.get('tipo') == 'realidad_aumentada':
-            from apps_privadas.inventario.models import Multimedio
             producto_id = data.get('producto_id')
             if Multimedio.objects.filter(producto_id=producto_id, tipo='realidad_aumentada').exists():
                 raise serializers.ValidationError({
@@ -36,7 +35,6 @@ class MultimedioConArchivoSerializer(serializers.Serializer):
 
 
 class CrearMultimedioSerializer(serializers.Serializer):
-    nombre = serializers.CharField(max_length=255)
     archivo_url = serializers.URLField(max_length=500)
     tipo = serializers.ChoiceField(choices=Multimedio.TIPO_CHOICES)
     es_principal = serializers.BooleanField(default=False)
@@ -51,7 +49,6 @@ class CrearMultimedioSerializer(serializers.Serializer):
 
     def validate(self, data):
         if data.get('tipo') == 'realidad_aumentada':
-            from apps_privadas.inventario.models import Multimedio
             producto_id = data.get('producto_id')
             if Multimedio.objects.filter(producto_id=producto_id, tipo='realidad_aumentada').exists():
                 raise serializers.ValidationError({
@@ -61,7 +58,6 @@ class CrearMultimedioSerializer(serializers.Serializer):
 
 
 class ActualizarMultimedioSerializer(serializers.Serializer):
-    nombre = serializers.CharField(max_length=255, required=False)
     archivo_url = serializers.URLField(max_length=500, required=False)
     tipo = serializers.ChoiceField(choices=Multimedio.TIPO_CHOICES, required=False)
     es_principal = serializers.BooleanField(required=False)
@@ -81,7 +77,6 @@ class ActualizarMultimedioSerializer(serializers.Serializer):
         producto_id = data.get('producto_id') or (instance.producto_id if instance else None)
 
         if tipo == 'realidad_aumentada' and producto_id:
-            from apps_privadas.inventario.models import Multimedio
             query = Multimedio.objects.filter(producto_id=producto_id, tipo='realidad_aumentada')
             if instance:
                 query = query.exclude(id=instance.id)

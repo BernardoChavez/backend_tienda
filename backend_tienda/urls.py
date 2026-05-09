@@ -35,4 +35,10 @@ urlpatterns = [
 
     # Inventario: /api/categorias/, /api/productos/, /api/multimedios/
     path('api/', include('apps_privadas.inventario.urls')),
+
+# Compras: /api/proveedores/
+    path('api/', include('apps_privadas.compras.urls')),
+
+    # Ventas: /api/ventas/, /api/detalles-venta/
+    path('api/', include('apps_privadas.venta.urls')),
 ]

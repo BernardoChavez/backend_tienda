@@ -40,7 +40,7 @@ SHARED_APPS = [
     'corsheaders',
     'apps_publicas.empresas',  # Registro de empresas (solo en public)
     'apps_privadas.seguridad',  # Usuarios (necesario en shared para AUTH_USER_MODEL)
-
+    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -56,6 +56,9 @@ TENANT_APPS = [
     'django.contrib.sessions',
     'apps_privadas.seguridad',
     'apps_privadas.inventario',
+    'apps_privadas.compras',
+    'apps_privadas.venta',
+    'apps_privadas.reportes',
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_spectacular',
@@ -138,10 +141,8 @@ DATABASES = {
         'USER': env('DB_USER'),
         'PASSWORD': env('DB_PASSWORD'),
         'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT', default='5432'),
-        'OPTIONS': {
-            'sslmode': 'require',  # ESTA LÍNEA ES OBLIGATORIA PARA NEON
-        }
+        'PORT': env('DB_PORT'),
+        
     }
 }   
 
