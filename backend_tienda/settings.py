@@ -40,7 +40,7 @@ SHARED_APPS = [
     'corsheaders',
     'apps_publicas.empresas',  # Registro de empresas (solo en public)
     'apps_privadas.seguridad',  # Usuarios (necesario en shared para AUTH_USER_MODEL)
-
+    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -56,6 +56,9 @@ TENANT_APPS = [
     'django.contrib.sessions',
     'apps_privadas.seguridad',
     'apps_privadas.inventario',
+    'apps_privadas.compras',
+    'apps_privadas.venta',
+    'apps_privadas.reportes',
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_spectacular',
@@ -127,6 +130,10 @@ WSGI_APPLICATION = 'backend_tienda.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# backend_tienda/settings.py
+
+# backend_tienda/settings.py
+
 DATABASES = {
     'default': {
         'ENGINE': 'django_tenants.postgresql_backend',
@@ -135,8 +142,9 @@ DATABASES = {
         'PASSWORD': env('DB_PASSWORD'),
         'HOST': env('DB_HOST'),
         'PORT': env('DB_PORT'),
+        
     }
-}
+}   
 
 DATABASE_ROUTERS = (
     'django_tenants.routers.TenantSyncRouter',

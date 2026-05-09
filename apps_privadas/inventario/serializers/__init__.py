@@ -3,10 +3,20 @@ from apps_privadas.inventario.serializers.categoria import (
     CrearCategoriaSerializer,
     ActualizarCategoriaSerializer
 )
+from apps_privadas.inventario.serializers.marca import (
+    MarcaSerializer,
+    CrearMarcaSerializer,
+    ActualizarMarcaSerializer
+)
 from apps_privadas.inventario.serializers.producto import (
     ProductoSerializer,
     CrearProductoSerializer,
     ActualizarProductoSerializer
+)
+from apps_privadas.inventario.serializers.variante_producto import (
+    VarianteProductoSerializer,
+    CrearVarianteProductoSerializer,
+    ActualizarVarianteProductoSerializer
 )
 from apps_privadas.inventario.serializers.multimedia import (
     MultimedioSerializer,
@@ -14,24 +24,22 @@ from apps_privadas.inventario.serializers.multimedia import (
     ActualizarMultimedioSerializer,
     MultimedioConArchivoSerializer
 )
-from apps_privadas.inventario.serializers.proveedor import (
-    ProveedorSerializer,
-    CrearProveedorSerializer,
-    ActualizarProveedorSerializer
-)
 
 __all__ = [
     'CategoriaSerializer',
     'CrearCategoriaSerializer',
     'ActualizarCategoriaSerializer',
+    'MarcaSerializer',
+    'CrearMarcaSerializer',
+    'ActualizarMarcaSerializer',
     'ProductoSerializer',
     'CrearProductoSerializer',
     'ActualizarProductoSerializer',
+    'VarianteProductoSerializer',
+    'CrearVarianteProductoSerializer',
+    'ActualizarVarianteProductoSerializer',
     'MultimedioSerializer',
     'CrearMultimedioSerializer',
     'ActualizarMultimedioSerializer',
     'MultimedioConArchivoSerializer',
-    'ProveedorSerializer',
-    'CrearProveedorSerializer',
-    'ActualizarProveedorSerializer'
 ]
