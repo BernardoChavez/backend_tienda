@@ -12,35 +12,59 @@ class MotorReportesDinamicos:
         self.mapa_campos = REPORT_CONFIG["mapa_campos"]
 
     def procesar_reporte(self, payload: Dict[str, Any]) -> Union[List[Dict], Dict]:
+        print(f"[DEBUG MOTOR] payload recibido: {payload}")
         vista_logica = payload.get("vista_logica")
         queryset = self._obtener_queryset_base(vista_logica)
         campos = self.mapa_campos.get(vista_logica, {})
+        print(f"[DEBUG MOTOR] 1. vista={vista_logica}, campos={list(campos.keys())[:5]}...")
 
         queryset = self._aplicar_select_related(queryset, campos, payload)
+        print(f"[DEBUG MOTOR] 2. type={type(queryset).__name__}")
 
         queryset = self._aplicar_filtros_where(queryset, payload, campos)
+        print(f"[DEBUG MOTOR] 3. type={type(queryset).__name__}")
 
         agrupar_por = payload.get("agrupar_por", [])
         metricas = payload.get("metricas_agrupadas", [])
 
+        ventana = payload.get("ventana", {})
+        if ventana.get("orden"):
+            print(f"[DEBUG MOTOR] 4. ventana: {ventana.get('funcion')}")
+            queryset = self._aplicar_funciones_ventana(queryset, ventana, campos)
+            print(f"[DEBUG MOTOR] 4. type={type(queryset).__name__}")
+
         if agrupar_por and metricas:
-            queryset = self._aplicar_agrupacion(queryset, agrupar_por, metricas, campos)
+            print("[DEBUG MOTOR] 5. agrupacion con metricas")
+            queryset = self._aplicar_agrupacion(queryset, agrupar_por, metricas, campos, vista_logica)
+        elif agrupar_por:
+            print("[DEBUG MOTOR] 5. solo agrupacion (distinct)")
+            campos_orm = [campos.get(c, c) for c in agrupar_por]
+            queryset = queryset.values(*campos_orm).distinct()
         elif metricas:
-            queryset = self._aplicar_anotaciones_simples(queryset, metricas, campos)
+            print("[DEBUG MOTOR] 5. anotaciones simples")
+            queryset = self._aplicar_anotaciones_simples(queryset, metricas, campos, vista_logica)
+            queryset = queryset.values(*campos.values())
+        else:
+            print(f"[DEBUG MOTOR] 6. values() con {len(campos)} campos")
+            queryset = queryset.values(*campos.values())
+        print(f"[DEBUG MOTOR] 5-6. type={type(queryset).__name__}")
+        print(f"[DEBUG MOTOR] SQL grouped: {queryset.query}")
 
         filtros_having = payload.get("filtros_having", [])
         if filtros_having and agrupar_por:
             queryset = self._aplicar_filtros_having(queryset, filtros_having)
-
-        ventana = payload.get("ventana", {})
-        if ventana:
-            queryset = self._aplicar_funciones_ventana(queryset, ventana, campos)
+            print(f"[DEBUG MOTOR] 5b. type={type(queryset).__name__}")
 
         ordenar_por = payload.get("ordenar_por")
         if ordenar_por:
             queryset = self._aplicar_ordenamiento(queryset, ordenar_por, campos)
+            print(f"[DEBUG MOTOR] 7. type={type(queryset).__name__}")
 
-        return self._finalizar_paginacion(queryset, payload.get("paginacion", {}))
+        print(f"[DEBUG MOTOR] SQL final: {queryset.query}")
+        print(f"[DEBUG MOTOR] 8. paginando...")
+        resultado = self._finalizar_paginacion(queryset, payload.get("paginacion", {}), campos)
+        print(f"[DEBUG MOTOR] 9. OK, {len(resultado.get('datos', []))} registros")
+        return resultado
 
     def _obtener_queryset_base(self, vista_logica: str) -> QuerySet:
         if not vista_logica or vista_logica not in self.modelos:
@@ -90,7 +114,10 @@ class MotorReportesDinamicos:
             bloque = self._construir_bloque_avanzado(filtros_avanzados, campos)
             query_final &= bloque
 
-        return queryset.filter(query_final).distinct()
+        queryset = queryset.filter(query_final)
+        if query_final:
+            queryset = queryset.distinct()
+        return queryset
 
     def _construir_bloque_avanzado(self, filtros_avanzados, campos) -> Q:
         operador_logico = filtros_avanzados.get("operador_logico", "AND")
@@ -115,7 +142,39 @@ class MotorReportesDinamicos:
 
         return bloque
 
-    def _aplicar_agrupacion(self, queryset, agrupar_por, metricas, campos) -> QuerySet:
+    def _construir_expresion(self, expr):
+        if isinstance(expr, str):
+            return F(expr)
+        op, *args = expr
+        ops = {
+            "add": lambda a, b: F(a) + F(b) if isinstance(a, str) else a + b,
+            "sub": lambda a, b: F(a) - F(b) if isinstance(a, str) else a - b,
+            "mul": lambda a, b: F(a) * F(b) if isinstance(a, str) else a * b,
+            "div": lambda a, b: F(a) / F(b) if isinstance(a, str) else a / b,
+        }
+        parsed = [self._construir_expresion(a) for a in args]
+        a, b = parsed
+        if isinstance(a, F) and isinstance(b, F):
+            return ops[op](a, b)
+        if isinstance(a, F):
+            return ops[op](a, b)
+        if isinstance(b, F):
+            return ops[op](a, b)
+        return ops[op](a, b)
+
+    def _aplicar_expresiones(self, queryset, metricas, expresiones_config, vista_logica):
+        for metrica in metricas:
+            campo = metrica.get("campo")
+            if campo in expresiones_config.get(vista_logica, {}):
+                expr_config = expresiones_config[vista_logica][campo]
+                queryset = queryset.annotate(**{campo: self._construir_expresion(expr_config["expr"])})
+        return queryset
+
+    def _aplicar_agrupacion(self, queryset, agrupar_por, metricas, campos, vista_logica=None) -> QuerySet:
+        expresiones_config = REPORT_CONFIG.get("expresiones", {})
+        if vista_logica:
+            queryset = self._aplicar_expresiones(queryset, metricas, expresiones_config, vista_logica)
+
         campos_agrupacion = [campos.get(c, c) for c in agrupar_por]
         anotaciones = {}
 
@@ -124,7 +183,10 @@ class MotorReportesDinamicos:
             operacion = metrica.get("operacion", "sum")
             alias = metrica.get("alias", f"{campo}_{operacion}")
 
-            campo_real = campos.get(campo, campo)
+            if vista_logica and campo in expresiones_config.get(vista_logica, {}):
+                campo_real = campo
+            else:
+                campo_real = campos.get(campo, campo)
 
             if operacion == "sum":
                 anotaciones[alias] = Sum(campo_real)
@@ -139,7 +201,11 @@ class MotorReportesDinamicos:
 
         return queryset.values(*campos_agrupacion).annotate(**anotaciones)
 
-    def _aplicar_anotaciones_simples(self, queryset, metricas, campos) -> QuerySet:
+    def _aplicar_anotaciones_simples(self, queryset, metricas, campos, vista_logica=None) -> QuerySet:
+        expresiones_config = REPORT_CONFIG.get("expresiones", {})
+        if vista_logica:
+            queryset = self._aplicar_expresiones(queryset, metricas, expresiones_config, vista_logica)
+
         anotaciones = {}
 
         for metrica in metricas:
@@ -147,7 +213,10 @@ class MotorReportesDinamicos:
             operacion = metrica.get("operacion", "sum")
             alias = metrica.get("alias", f"{campo}_{operacion}")
 
-            campo_real = campos.get(campo, campo)
+            if vista_logica and campo in expresiones_config.get(vista_logica, {}):
+                campo_real = campo
+            else:
+                campo_real = campos.get(campo, campo)
 
             if operacion == "sum":
                 anotaciones[alias] = Sum(campo_real)
@@ -251,12 +320,33 @@ class MotorReportesDinamicos:
 
         return queryset.order_by(campo_real)
 
-    def _finalizar_paginacion(self, queryset, paginacion) -> Dict:
+    def _serializar_valor(self, valor):
+        from decimal import Decimal
+        from datetime import datetime, date
+        if isinstance(valor, Decimal):
+            return float(valor)
+        if isinstance(valor, (datetime, date)):
+            return valor.isoformat()
+        return valor
+
+    def _finalizar_paginacion(self, queryset, paginacion, campos=None) -> Dict:
         pagina = paginacion.get("pagina", 1)
         cantidad = paginacion.get("cantidad_por_pagina", 50)
 
         paginador = Paginator(list(queryset), cantidad)
         page_obj = paginador.get_page(pagina)
+
+        reverse_map = {v: k for k, v in (campos or {}).items()}
+
+        def mapear_clave(k):
+            return reverse_map.get(k, k)
+
+        datos = []
+        for item in page_obj.object_list:
+            if isinstance(item, dict):
+                datos.append({mapear_clave(k): self._serializar_valor(v) for k, v in item.items()})
+            else:
+                datos.append(item)
 
         return {
             "paginacion": {
@@ -266,5 +356,5 @@ class MotorReportesDinamicos:
                 "tiene_anterior": page_obj.has_previous(),
                 "tiene_siguiente": page_obj.has_next(),
             },
-            "datos": list(page_obj.object_list)
+            "datos": datos
         }

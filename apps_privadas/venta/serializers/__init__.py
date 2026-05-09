@@ -2,7 +2,9 @@ from apps_privadas.venta.serializers.venta import (
     VentaSerializer,
     CrearVentaSerializer,
     ActualizarVentaSerializer,
-    DetalleVentaInputSerializer
+    DetalleVentaInputSerializer,
+    ActualizarDetalleVentaInputSerializer,
+    DetalleVentaOutputSerializer,
 )
 
 __all__ = [
@@ -10,4 +12,6 @@ __all__ = [
     'CrearVentaSerializer',
     'ActualizarVentaSerializer',
     'DetalleVentaInputSerializer',
+    'ActualizarDetalleVentaInputSerializer',
+    'DetalleVentaOutputSerializer',
 ]

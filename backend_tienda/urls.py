@@ -41,4 +41,7 @@ urlpatterns = [
 
     # Ventas: /api/ventas/, /api/detalles-venta/
     path('api/', include('apps_privadas.venta.urls')),
+
+    # Reportes: /api/reporte/qbe/, /api/reporte/nlp/, /api/reporte/vistas/
+    path('api/', include('apps_privadas.reportes.urls')),
 ]

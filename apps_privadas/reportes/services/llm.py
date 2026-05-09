@@ -1,6 +1,7 @@
 import requests
 import json
 import re
+import time
 from ..config_reportes import REPORT_CONFIG
 
 
@@ -8,7 +9,7 @@ class LLMTraductorReportes:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.url = "https://openrouter.ai/api/v1/chat/completions"
-        self.model = "google/gemini-2.5-flash"
+        self.model = "openrouter/free"
 
     def traducir_texto_a_json(self, texto_usuario: str) -> dict:
         vistas = list(REPORT_CONFIG["modelos"].keys())
@@ -29,24 +30,41 @@ class LLMTraductorReportes:
             "response_format": {"type": "json_object"}
         }
 
-        try:
-            response = requests.post(self.url, headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
+        ultimo_error = None
+        for intento in range(3):
+            try:
+                response = requests.post(self.url, headers=headers, json=payload, timeout=30)
+                response.raise_for_status()
 
-            res_json = response.json()
-            raw_content = res_json['choices'][0]['message']['content']
+                res_json = response.json()
+                raw_content = res_json['choices'][0]['message']['content']
 
-            clean_content = re.sub(r'```json|```', '', raw_content).strip()
-            resultado = json.loads(clean_content)
+                clean_content = re.sub(r'```json|```', '', raw_content).strip()
+                resultado = json.loads(clean_content)
 
-            return self._validar_payload(resultado, mapa_campos)
+                return self._validar_payload(resultado, mapa_campos)
 
-        except requests.exceptions.Timeout:
-            raise Exception("La IA tardó demasiado en responder. Intenta de nuevo.")
-        except json.JSONDecodeError as e:
-            raise Exception(f"La IA devolvió un formato inválido: {str(e)}")
-        except Exception as e:
-            raise Exception(f"Falla en la comunicación con la IA: {str(e)}")
+            except requests.exceptions.HTTPError as e:
+                status_code = e.response.status_code if hasattr(e, 'response') else 0
+                if status_code == 429:
+                    espera = (intento + 1) * 3
+                    print(f"[DEBUG LLM] Rate limited (429), reintentando en {espera}s (intento {intento + 1}/3)")
+                    time.sleep(espera)
+                    ultimo_error = e
+                    continue
+                raise Exception(f"Error HTTP {status_code} de la IA: {str(e)}")
+            except requests.exceptions.Timeout:
+                espera = (intento + 1) * 3
+                print(f"[DEBUG LLM] Timeout, reintentando en {espera}s (intento {intento + 1}/3)")
+                time.sleep(espera)
+                ultimo_error = e
+                continue
+            except json.JSONDecodeError as e:
+                raise Exception(f"La IA devolvió un formato inválido: {str(e)}")
+            except Exception as e:
+                raise Exception(f"Falla en la comunicación con la IA: {str(e)}")
+
+        raise Exception(f"La IA no respondió después de 3 intentos. Último error: {str(ultimo_error)}")
 
     def _construir_prompt(self, vistas, mapa_campos, texto_usuario) -> str:
         ejemplos = self._obtener_ejemplos()
@@ -97,19 +115,21 @@ Responde SOLO con el JSON."""
     def _obtener_combinaciones(self) -> str:
         return """COMBINACIONES VÁLIDAS DE TABLAS:
 
-- detalle_venta: acceso a venta_fecha, venta_estado, producto_nombre, categoria_nombre, marca_nombre
-  Útil para: productos más vendidos, ventas por categoría, ranking de productos
+ - detalle_venta: acceso a cliente_nombre, cliente_apellido, producto_nombre, categoria_nombre, marca_nombre, venta_fecha
+  Útil para: productos más vendidos, clientes por cantidad comprada, ventas por categoría, ranking
 
-- venta: acceso a cliente_nombre, cliente_apellido, estado, tipo
+ - venta: acceso a cliente_nombre, cliente_apellido, estado, tipo
   Útil para: clientes por gasto, ventas por tipo/estado
 
-- detalle_compra: acceso a compra_fecha, producto_nombre, categoria_nombre
-  Útil para: compras por producto, proveedores más comprados
+ - detalle_compra: acceso a proveedor_nombre, compra_fecha, producto_nombre, categoria_nombre
+  Útil para: compras por producto, proveedores más comprados, gastos por proveedor
 
-- producto: acceso a categoria_nombre, marca_nombre, activo
+ - producto: acceso a categoria_nombre, marca_nombre, activo
   Útil para: inventario por categoría/marca, productos activos
 
-- cliente: acceso a username, nombre, apellido, email"""
+ - cliente: acceso a username, nombre, apellido, email
+
+ATENCIÓN: Las vistas 'categoria' y 'marca' NO existen. Usa detalle_venta o producto para reportes que involucren categorías o marcas."""
 
     def _obtener_ejemplos(self) -> str:
         return """EJEMPLOS DE PAYLOADS VÁLIDOS:
@@ -187,9 +207,21 @@ Responde SOLO con el JSON."""
     {{"campo": "id", "operacion": "count", "alias": "num_compras"}}
   ],
   "ordenar_por": "-total_comprado"
+}}
+
+8. "Ganancias del mes por categoría":
+{{
+  "vista_logica": "detalle_venta",
+  "agrupar_por": ["categoria_id", "categoria_nombre"],
+  "metricas_agrupadas": [
+    {{"campo": "ganancia", "operacion": "sum", "alias": "ganancia_total"}}
+  ],
+  "filtros": [{{"campo": "venta_fecha", "operador": "month", "valor": 5}}],
+  "ordenar_por": "-ganancia_total"
 }}"""
 
     def _validar_payload(self, payload: dict, mapa_campos: dict) -> dict:
+        from ..config_reportes import REPORT_CONFIG
         vista_logica = payload.get("vista_logica")
 
         if not vista_logica:
@@ -199,6 +231,9 @@ Responde SOLO con el JSON."""
             raise Exception(f"Vista '{vista_logica}' no existe. Válidas: {list(mapa_campos.keys())}")
 
         campos_disponibles = set(mapa_campos.get(vista_logica, {}).keys())
+        expresiones = REPORT_CONFIG.get("expresiones", {})
+        expr_vista = expresiones.get(vista_logica, {})
+        campos_disponibles.update(expr_vista.keys())
 
         agrupar_por = payload.get("agrupar_por", [])
         for campo in agrupar_por:

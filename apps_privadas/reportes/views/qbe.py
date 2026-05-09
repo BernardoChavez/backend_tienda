@@ -21,11 +21,16 @@ class ReporteQBEView(APIView):
         # 2. Procesar con el motor
         try:
             motor = MotorReportesDinamicos()
-            # Usamos validated_data para asegurar tipos de datos correctos
+            print(f"[DEBUG QBE] validated_data: {serializer.validated_data}")
             resultado = motor.procesar_reporte(serializer.validated_data)
+            print(f"[DEBUG QBE] resultado keys: {resultado.keys() if isinstance(resultado, dict) else type(resultado)}")
             return Response(resultado, status=status.HTTP_200_OK)
             
         except ValueError as e:
+            import traceback
+            traceback.print_exc()
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({"error": "Error interno", "detail": str(e)}, status=500)
