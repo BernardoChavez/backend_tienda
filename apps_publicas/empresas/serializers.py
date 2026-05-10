@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from apps_publicas.empresas.models import Empresa, Dominio
+from apps_publicas.empresas.models import Empresa, Dominio, Plan, Suscripcion, CicloSuscripcion, SuscripcionCambio
 
 User = get_user_model()
 
@@ -27,6 +27,10 @@ class EmpresaRegistroSerializer(serializers.Serializer):
     # Datos de la empresa
     nombre = serializers.CharField(max_length=100)
     correo = serializers.EmailField()
+
+    # Datos del plan inicial
+    plan = serializers.PrimaryKeyRelatedField(queryset=Plan.objects.filter(activo=True))
+    ciclo = serializers.ChoiceField(choices=CicloSuscripcion.choices, default=CicloSuscripcion.MENSUAL)
 
     # Datos del super admin
     super_admin = SuperAdminSerializer()
@@ -79,3 +83,60 @@ class EmpresaCreatedSerializer(serializers.Serializer):
     super_admin_username = serializers.CharField()
     mensaje = serializers.CharField()
 
+
+class PlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
+        fields = [
+            'id',
+            'nombre',
+            'descripcion',
+            'precio_mensual',
+            'precio_anual',
+            'activo',
+            'limite_usuarios',
+            'limite_productos',
+            'limite_clientes',
+            'limite_proveedores',
+            'feature_realidad_aumentada',
+            'feature_fotos_3d',
+            'feature_reportes_dinamicos',
+            'feature_backup_automatico',
+        ]
+
+
+class SuscripcionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Suscripcion
+        fields = [
+            'id',
+            'empresa',
+            'plan',
+            'estado',
+            'ciclo',
+            'fecha_inicio',
+            'fecha_fin',
+            'auto_renovar',
+            'ultima_renovacion',
+            'cancelada_en',
+            'cancelada_por',
+            'fecha_creacion',
+        ]
+
+    def validate_plan(self, value):
+        if not value.activo:
+            raise serializers.ValidationError('El plan seleccionado no está activo.')
+        return value
+
+
+class SuscripcionCambioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SuscripcionCambio
+        fields = [
+            'id',
+            'suscripcion',
+            'plan_anterior',
+            'plan_nuevo',
+            'cambiado_en',
+            'motivo',
+        ]

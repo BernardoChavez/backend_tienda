@@ -1,5 +1,9 @@
 from django.db import transaction
-from apps_publicas.empresas.models import Empresa, Dominio
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import timedelta
+from apps_publicas.empresas.models import Empresa, Dominio, Plan, Suscripcion, SuscripcionCambio, EstadoSuscripcion, CicloSuscripcion
 from apps_privadas.seguridad.models import Usuario
 import re
 import os
@@ -66,7 +70,7 @@ class EmpresaRegistroService:
 
     @staticmethod
     @transaction.atomic
-    def crear_empresa_con_admin(nombre_empresa, correo_empresa, super_admin_data):
+    def crear_empresa_con_admin(nombre_empresa, correo_empresa, super_admin_data, plan, ciclo):
         """
         Crea una empresa completa con su super admin en una sola transacción.
 
@@ -134,7 +138,15 @@ class EmpresaRegistroService:
 
             print(f"✓ Dominio creado: {dominio.domain}")
 
-            # 3. Crear super admin en el esquema de la empresa
+            # 3. Crear suscripcion inicial en el esquema public
+            SuscripcionService.crear_suscripcion({
+                'empresa': empresa,
+                'plan': plan,
+                'ciclo': ciclo,
+                'estado': EstadoSuscripcion.ACTIVA,
+            })
+
+            # 4. Crear super admin en el esquema de la empresa
             from django_tenants.utils import schema_context
             
             # Validar y limpiar datos ANTES
@@ -172,6 +184,26 @@ class EmpresaRegistroService:
                 )
 
                 print(f"✓ Super admin creado: {super_admin.username} en schema {schema_name}")
+
+            # 5. Enviar correo al super admin
+            try:
+                subject = f"Bienvenido {nombre_empresa}"
+                message = (
+                    f"Hola {super_admin.username},\n\n"
+                    f"Tu empresa '{nombre_empresa}' fue creada exitosamente.\n"
+                    f"Acceso: http://{dominio.domain}/login/\n"
+                    f"Usuario: {super_admin.username}\n\n"
+                    "Si no solicitaste este registro, ignora este mensaje."
+                )
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                    fail_silently=False,
+                )
+            except Exception as exc:
+                print(f"⚠️ No se pudo enviar el correo: {str(exc)}")
 
             # Retornar respuesta exitosa
             return {
@@ -243,4 +275,116 @@ class EmpresaListaService:
             return dominio.domain
         except Dominio.DoesNotExist:
             return None
+
+
+class PlanService:
+    @staticmethod
+    def listar_planes(activos_only=False):
+        queryset = Plan.objects.all()
+        if activos_only:
+            queryset = queryset.filter(activo=True)
+        return queryset
+
+    @staticmethod
+    def crear_plan(data):
+        return Plan.objects.create(**data)
+
+    @staticmethod
+    def actualizar_plan(instancia, data):
+        for campo, valor in data.items():
+            setattr(instancia, campo, valor)
+        instancia.save()
+        return instancia
+
+    @staticmethod
+    def eliminar_plan(instancia):
+        instancia.delete()
+
+
+class SuscripcionService:
+    @staticmethod
+    @transaction.atomic
+    def crear_suscripcion(data):
+        empresa = data.get('empresa')
+        plan = data.get('plan')
+
+        if not plan.activo:
+            raise ValueError('El plan seleccionado no está activo.')
+
+        if Suscripcion.objects.filter(empresa=empresa, estado=EstadoSuscripcion.ACTIVA).exists():
+            raise ValueError('La empresa ya tiene una suscripcion activa.')
+
+        return Suscripcion.objects.create(**data)
+
+    @staticmethod
+    @transaction.atomic
+    def actualizar_suscripcion(instancia, data):
+        plan_anterior = instancia.plan
+        plan_nuevo = data.get('plan', instancia.plan)
+
+        for campo, valor in data.items():
+            setattr(instancia, campo, valor)
+        instancia.save()
+
+        if plan_anterior != plan_nuevo:
+            SuscripcionCambio.objects.create(
+                suscripcion=instancia,
+                plan_anterior=plan_anterior,
+                plan_nuevo=plan_nuevo,
+                motivo=data.get('motivo', '')
+            )
+
+        return instancia
+
+    @staticmethod
+    @transaction.atomic
+    def cancelar_suscripcion(instancia, cancelada_por='', motivo=''):
+        instancia.estado = EstadoSuscripcion.CANCELADA
+        instancia.cancelada_en = timezone.now()
+        instancia.cancelada_por = cancelada_por or instancia.cancelada_por
+        instancia.auto_renovar = False
+        instancia.save()
+
+        if motivo:
+            SuscripcionCambio.objects.create(
+                suscripcion=instancia,
+                plan_anterior=instancia.plan,
+                plan_nuevo=instancia.plan,
+                motivo=motivo
+            )
+
+        return instancia
+
+    @staticmethod
+    @transaction.atomic
+    def renovar_suscripcion(instancia, renovada_por='', motivo=''):
+        ahora = timezone.now()
+        if instancia.ciclo == CicloSuscripcion.ANUAL:
+            nueva_fecha_fin = ahora + timedelta(days=365)
+        else:
+            nueva_fecha_fin = ahora + timedelta(days=30)
+
+        instancia.estado = EstadoSuscripcion.ACTIVA
+        instancia.ultima_renovacion = ahora
+        instancia.fecha_fin = nueva_fecha_fin
+        instancia.auto_renovar = True
+        instancia.save()
+
+        SuscripcionCambio.objects.create(
+            suscripcion=instancia,
+            plan_anterior=instancia.plan,
+            plan_nuevo=instancia.plan,
+            motivo=motivo or f"Renovacion por {renovada_por or 'sistema'}"
+        )
+
+        return instancia
+
+
+class SuscripcionCambioService:
+    @staticmethod
+    def listar_cambios(suscripcion_id=None):
+        queryset = SuscripcionCambio.objects.select_related('suscripcion', 'plan_anterior', 'plan_nuevo')
+        if suscripcion_id:
+            queryset = queryset.filter(suscripcion_id=suscripcion_id)
+        return queryset
 
