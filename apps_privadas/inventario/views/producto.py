@@ -1,5 +1,6 @@
 from apps_privadas.inventario.views.base import BaseViewSet
-from rest_framework import status
+from rest_framework import status, filters
+
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
@@ -18,6 +19,16 @@ class ProductoViewSet(BaseViewSet):
     serializer_class = ProductoSerializer
     crear_serializer_class = CrearProductoSerializer
     actualizar_serializer_class = ActualizarProductoSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['nombre', 'descripcion']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        categoria_id = self.request.query_params.get('categoria')
+        if categoria_id:
+            queryset = queryset.filter(categoria_id=categoria_id)
+        return queryset
+
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

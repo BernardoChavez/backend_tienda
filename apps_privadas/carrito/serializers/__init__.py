@@ -1,0 +1,1 @@
+from apps_privadas.carrito.serializers.carrito import CarritoSerializer, DetalleCarritoSerializer

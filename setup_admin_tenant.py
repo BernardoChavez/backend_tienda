@@ -26,7 +26,7 @@ def setup_admin_tenant():
     """Crea el tenant Admin para el acceso público"""
 
     print("\n" + "="*60)
-    print("🔧 CONFIGURACIÓN DEL TENANT ADMIN")
+    print("--- CONFIGURACION DEL TENANT ADMIN ---")
     print("="*60 + "\n")
 
     try:
@@ -34,7 +34,7 @@ def setup_admin_tenant():
         empresa_admin = Empresa.objects.filter(schema_name='public').first()
 
         if empresa_admin:
-            print("⚠️  El tenant Admin ya existe.\n")
+            print("[!] El tenant Admin ya existe.\n")
             print(f"  Nombre: {empresa_admin.nombre}")
             print(f"  Schema: {empresa_admin.schema_name}")
             print(f"  Email: {empresa_admin.correo}\n")
@@ -43,13 +43,13 @@ def setup_admin_tenant():
             dominios = Dominio.objects.filter(tenant=empresa_admin)
             print("  Dominios registrados:")
             for dominio in dominios:
-                print(f"    • {dominio.domain}")
+                print(f"    - {dominio.domain}")
             print()
 
             return True
 
         # Crear la empresa Admin
-        print("⏳ Creando empresa Admin...")
+        print("[...] Creando empresa Admin...")
         empresa_admin = Empresa.objects.create(
             nombre='Admin',
             schema_name='public',
@@ -57,39 +57,39 @@ def setup_admin_tenant():
             is_active=True
         )
 
-        print(f"✓ Empresa creada: {empresa_admin.nombre} (ID: {empresa_admin.id})")
+        print(f"[OK] Empresa creada: {empresa_admin.nombre} (ID: {empresa_admin.id})")
         print(f"  Schema: {empresa_admin.schema_name}\n")
 
         # Crear dominio 127.0.0.1
-        print("⏳ Registrando dominio 127.0.0.1...")
+        print("[...] Registrando dominio 127.0.0.1...")
         dominio_ip = Dominio.objects.create(
             domain='127.0.0.1',
             tenant=empresa_admin,
             is_primary=True
         )
 
-        print(f"✓ Dominio registrado: {dominio_ip.domain}\n")
+        print(f"[OK] Dominio registrado: {dominio_ip.domain}\n")
 
         # Crear dominio localhost
-        print("⏳ Registrando dominio localhost...")
+        print("[...] Registrando dominio localhost...")
         dominio_localhost = Dominio.objects.create(
             domain='localhost',
             tenant=empresa_admin,
             is_primary=False
         )
 
-        print(f"✓ Dominio registrado: {dominio_localhost.domain}\n")
+        print(f"[OK] Dominio registrado: {dominio_localhost.domain}\n")
 
         # Resumen
         print("="*60)
-        print("✅ CONFIGURACIÓN COMPLETADA")
+        print("OK - CONFIGURACION COMPLETADA")
         print("="*60 + "\n")
 
-        print("🌐 Puedes acceder a:\n")
-        print("  • http://127.0.0.1:8000/admin/")
-        print("  • http://localhost:8000/admin/\n")
+        print("Puedes acceder a:\n")
+        print("  - http://127.0.0.1:8000/admin/")
+        print("  - http://localhost:8000/admin/\n")
 
-        print("📝 Próximos pasos:\n")
+        print("Proximos pasos:\n")
         print("  1. Crea un super usuario:")
         print("     python manage.py createsuperuser\n")
         print("  2. Inicia el servidor:")
@@ -101,7 +101,7 @@ def setup_admin_tenant():
 
     except Exception as e:
         print("\n" + "="*60)
-        print("❌ ERROR")
+        print("ERROR")
         print("="*60 + "\n")
         print(f"  {str(e)}\n")
         return False
