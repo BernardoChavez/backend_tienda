@@ -22,7 +22,7 @@ empresa = Empresa.objects.create(
     is_active=True
 )
 
-print(f"✓ Empresa creada: {empresa.nombre} (ID: {empresa.id})")
+print(f"[OK] Empresa creada: {empresa.nombre} (ID: {empresa.id})")
 print(f"  Schema: {empresa.schema_name}")
 
 # Crear el dominio para la empresa
@@ -32,7 +32,7 @@ dominio = Dominio.objects.create(
     is_primary=True
 )
 
-print(f"✓ Dominio creado: {dominio.domain}")
+print(f"[OK] Dominio creado: {dominio.domain}")
 print(f"\nTienda Amiga está lista para usar en: http://tienda-amiga.localhost")
 
 

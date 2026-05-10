@@ -59,6 +59,8 @@ TENANT_APPS = [
     'apps_privadas.compras',
     'apps_privadas.venta',
     'apps_privadas.reportes',
+    'apps_privadas.carrito',
+
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_spectacular',
