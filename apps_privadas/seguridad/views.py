@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import Group, Permission
 
-from apps_privadas.seguridad.models import Usuario
+from apps_privadas.seguridad.models import Usuario, BitacoraAuditoria
 from apps_privadas.seguridad.serializers import (
     BitacoraAuditoriaSerializer,
     UsuarioSerializer,
