@@ -7,6 +7,27 @@ from apps_publicas.empresas.models import Empresa, Dominio, Plan, Suscripcion, S
 from apps_privadas.seguridad.models import Usuario
 import re
 import os
+import threading
+
+class EmailThread(threading.Thread):
+    def __init__(self, subject, message, from_email, recipient_list):
+        self.subject = subject
+        self.message = message
+        self.from_email = from_email
+        self.recipient_list = recipient_list
+        threading.Thread.__init__(self)
+
+    def run(self):
+        try:
+            send_mail(
+                self.subject,
+                self.message,
+                self.from_email,
+                self.recipient_list,
+                fail_silently=True, # Es vital que sea True para que no rompa el hilo si falla
+            )
+        except Exception as e:
+            print(f"Error en el hilo de correo: {e}")
 
 
 class EmpresaRegistroService:
@@ -195,13 +216,19 @@ class EmpresaRegistroService:
                     f"Usuario: {super_admin.username}\n\n"
                     "Si no solicitaste este registro, ignora este mensaje."
                 )
-                send_mail(
+                # send_mail(
+                #     subject,
+                #     message,
+                #     settings.DEFAULT_FROM_EMAIL,
+                #     [email],
+                #     fail_silently=False,
+                # )
+                EmailThread(
                     subject,
                     message,
                     settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                    fail_silently=False,
-                )
+                    [email]
+                ).start()
             except Exception as exc:
                 print(f"⚠️ No se pudo enviar el correo: {str(exc)}")
 
