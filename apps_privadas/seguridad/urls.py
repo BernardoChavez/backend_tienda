@@ -6,7 +6,7 @@ from apps_privadas.seguridad.views import (
     login,
     solicitar_recuperacion,
     verificar_codigo,
-    cambiar_password,
+    cambiar_password, BitacoraAuditoriaViewSet,
 )
 
 # Router para ViewSets
