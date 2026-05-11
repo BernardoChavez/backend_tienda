@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps_privadas.seguridad.models import Usuario
+from apps_privadas.seguridad.models import Usuario, BitacoraAuditoria
 from django.contrib.auth.models import Group, Permission
 
 
