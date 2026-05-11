@@ -13,6 +13,7 @@ from apps_privadas.seguridad.views import (
 router = DefaultRouter()
 router.register(r'usuarios', UsuarioViewSet, basename='usuario')
 router.register(r'roles', RolViewSet, basename='rol')
+router.register(r'bitacora', BitacoraAuditoriaViewSet, basename='bitacora')
 
 app_name = 'seguridad'
 
