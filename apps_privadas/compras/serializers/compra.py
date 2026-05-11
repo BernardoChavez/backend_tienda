@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps_privadas.compras.models import Compra
+from apps_privadas.compras.models import Compra, DetalleCompra
 
 
 class DetalleCompraInputSerializer(serializers.Serializer):
@@ -21,6 +21,25 @@ class CompraSerializer(serializers.ModelSerializer):
         model = Compra
         fields = ['id', 'fecha', 'total', 'proveedor', 'proveedor_nombre']
         read_only_fields = ['id', 'fecha']
+
+
+class DetalleCompraSerializer(serializers.ModelSerializer):
+    sku = serializers.CharField(source='variante_producto.sku', read_only=True)
+    producto_nombre = serializers.CharField(source='variante_producto.producto.nombre', read_only=True)
+
+    class Meta:
+        model = DetalleCompra
+        fields = [
+            'id',
+            'compra',
+            'variante_producto',
+            'sku',
+            'producto_nombre',
+            'cantidad',
+            'costo_unitario',
+            'costo_subtotal',
+        ]
+        read_only_fields = ['id']
 
 
 class CrearCompraSerializer(serializers.Serializer):

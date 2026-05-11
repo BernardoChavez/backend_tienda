@@ -7,6 +7,7 @@ from apps_privadas.compras.serializers.compra import (
     CompraSerializer,
     CrearCompraSerializer,
     ActualizarCompraSerializer,
+    DetalleCompraSerializer,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     'CompraSerializer',
     'CrearCompraSerializer',
     'ActualizarCompraSerializer',
+    'DetalleCompraSerializer',
 ]

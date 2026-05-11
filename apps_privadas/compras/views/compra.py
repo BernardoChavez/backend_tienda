@@ -2,12 +2,16 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
-from apps_privadas.compras.models import Compra, DetalleCompra
+from rest_framework.decorators import action
+
+from apps_privadas.compras.models import Compra
 from apps_privadas.compras.serializers import (
     CompraSerializer,
     CrearCompraSerializer,
-    ActualizarCompraSerializer
+    ActualizarCompraSerializer,
+    DetalleCompraSerializer,
 )
+from apps_privadas.compras.services.compra.service import CompraService
 
 
 class CompraViewSet(viewsets.ModelViewSet):
@@ -32,20 +36,8 @@ class CompraViewSet(viewsets.ModelViewSet):
         proveedor_id = data.pop('proveedor_id')
         detalles_data = data.pop('detalles', [])
 
-        compra = Compra.objects.create(
-            proveedor_id=proveedor_id,
-            total=data.get('total', 0)
-        )
-
-        for detalle in detalles_data:
-            costo_subtotal = float(detalle['cantidad']) * float(detalle['costo_unitario'])
-            DetalleCompra.objects.create(
-                compra=compra,
-                variante_producto_id=detalle['variante_producto_id'],
-                cantidad=detalle['cantidad'],
-                costo_unitario=detalle['costo_unitario'],
-                costo_subtotal=costo_subtotal
-            )
+        compra = CompraService.crear_compra(proveedor_id)
+        CompraService.aplicar_detalles(compra, detalles_data)
 
         return Response(
             CompraSerializer(compra).data,
@@ -74,3 +66,10 @@ class CompraViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
+
+    @action(detail=True, methods=['get'])
+    def detalles(self, request, pk=None):
+        compra = self.get_object()
+        detalles = compra.detalles.all()
+        serializer = DetalleCompraSerializer(detalles, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
