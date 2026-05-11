@@ -33,6 +33,23 @@ class CrearUsuarioSerializer(serializers.Serializer):
         if Usuario.objects.filter(username=value, is_active=True).exists():
             raise serializers.ValidationError(f"El usuario {value} ya existe")
         return value
+class BitacoraAuditoriaSerializer(serializers.ModelSerializer):
+    """Serializer de solo lectura para consultar la bitacora de auditoria."""
+
+    class Meta:
+        model = BitacoraAuditoria
+        fields = [
+            'id_bitacora',
+            'fecha',
+            'hora',
+            'entidad',
+            'detalles',
+            'accion',
+            'usuarios_id',
+        ]
+        read_only_fields = fields
+
+
 
 
 class ActualizarUsuarioSerializer(serializers.Serializer):
