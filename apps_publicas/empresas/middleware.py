@@ -1,9 +1,5 @@
-import logging
 from django_tenants.middleware.main import TenantMainMiddleware
 from django_tenants.utils import get_tenant_model
-
-
-logger = logging.getLogger(__name__)
 
 
 class TenantMiddleware(TenantMainMiddleware):
@@ -12,7 +8,7 @@ class TenantMiddleware(TenantMainMiddleware):
         request = self.request if hasattr(self, 'request') else None
         if request:
             tenant_header = request.META.get('HTTP_X_TENANT')
-            logger.info("DEBUG: Encabezado recibido -> %s", tenant_header)
+            print(f"DEBUG: Encabezado recibido -> {tenant_header}")
             if tenant_header:
                 TenantModel = get_tenant_model()
                 try:
