@@ -70,6 +70,7 @@ class BitacoraAuditoriaViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(detalles__icontains=buscar)
 
         return queryset
+    
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
