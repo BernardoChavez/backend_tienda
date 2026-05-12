@@ -3,18 +3,21 @@ from django_tenants.utils import get_tenant_model
 
 
 class TenantMiddleware(TenantMainMiddleware):
-    def get_tenant(self, domain_model, hostname):
-        # Primero intenta por header X-Tenant (móvil/Flutter)
-        request = self.request if hasattr(self, 'request') else None
-        if request:
-            tenant_header = request.META.get('HTTP_X_TENANT')
-            print(f"DEBUG: Encabezado recibido -> {tenant_header}")
-            if tenant_header:
-                TenantModel = get_tenant_model()
-                try:
-                    return TenantModel.objects.get(schema_name=tenant_header)
-                except TenantModel.DoesNotExist:
-                    pass
+    # ESTO ES LO QUE FALTA: Atrapamos la request aquí
+    def process_request(self, request):
+        self.request = request
+        return super().process_request(request)
 
-        # Si no hay header, usa subdominio (web)
+    def get_tenant(self, domain_model, hostname):
+        # Ahora self.request sí existe y el print funcionará
+        tenant_header = self.request.META.get('HTTP_X_TENANT')
+        print(f"DEBUG: Encabezado recibido -> {tenant_header}")
+
+        if tenant_header:
+            TenantModel = get_tenant_model()
+            try:
+                return TenantModel.objects.get(schema_name=tenant_header)
+            except TenantModel.DoesNotExist:
+                print(f"ERROR: El tenant {tenant_header} no existe")
+                pass
         return super().get_tenant(domain_model, hostname)
