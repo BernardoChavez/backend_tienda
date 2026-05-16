@@ -18,7 +18,7 @@ from getpass import getpass
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend_tienda.settings')
 django.setup()
 
-from apps_privadas.seguridad.models import Usuario
+from apps_privadas.seguridad.models.usuario import Usuario
 from django_tenants.utils import schema_context
 
 SCHEMA = 'tienda_amiga'
@@ -91,5 +91,3 @@ def crear_superuser():
 
 if __name__ == '__main__':
     crear_superuser()
-
-

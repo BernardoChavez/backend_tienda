@@ -28,7 +28,7 @@ from datos_prueba.datos import (
 
 from django.db import connection
 from apps_publicas.empresas.models import Empresa
-from apps_privadas.seguridad.models import Usuario
+from apps_privadas.seguridad.models.usuario import Usuario
 from apps_privadas.inventario.models import Categoria, Marca, Producto, VarianteProducto
 from apps_privadas.compras.models import Proveedor, Compra, DetalleCompra
 from apps_privadas.venta.models import Venta, DetalleVenta

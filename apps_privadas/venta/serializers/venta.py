@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from apps_privadas.venta.models import Venta, DetalleVenta
 from apps_privadas.inventario.models import VarianteProducto
+from apps_privadas.seguridad.models.usuario import Usuario
 
 
 class DetalleVentaOutputSerializer(serializers.ModelSerializer):
@@ -61,7 +62,6 @@ class CrearVentaSerializer(serializers.Serializer):
     )
 
     def validate_usuario_id(self, value):
-        from apps_privadas.seguridad.models import Usuario
         if not Usuario.objects.filter(id=value).exists():
             raise serializers.ValidationError(f'El usuario con ID {value} no existe')
         return value
@@ -79,7 +79,6 @@ class ActualizarVentaSerializer(serializers.Serializer):
 
     def validate_usuario_id(self, value):
         if value:
-            from apps_privadas.seguridad.models import Usuario
             if not Usuario.objects.filter(id=value).exists():
                 raise serializers.ValidationError(f'El usuario con ID {value} no existe')
         return value

@@ -1,13 +1,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from apps_privadas.seguridad.views import (
-    UsuarioViewSet,
-    RolViewSet,
+from apps_privadas.seguridad.views.usuarios import UsuarioViewSet
+from apps_privadas.seguridad.views.roles import RolViewSet
+from apps_privadas.seguridad.views.auth import (
     login,
     solicitar_recuperacion,
     verificar_codigo,
-    cambiar_password, BitacoraAuditoriaViewSet,
+    cambiar_password,
 )
+from apps_privadas.seguridad.views.bitacora import BitacoraAuditoriaViewSet
 
 # Router para ViewSets
 router = DefaultRouter()
@@ -24,4 +25,3 @@ urlpatterns = [
     path('recuperar-password/verificar/', verificar_codigo, name='recuperar-verificar'),
     path('recuperar-password/cambiar/', cambiar_password, name='recuperar-cambiar'),
 ]
-

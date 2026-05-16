@@ -1,7 +1,7 @@
 from apps_privadas.venta.models import Venta, DetalleVenta
 from apps_privadas.compras.models import Compra, DetalleCompra
 from apps_privadas.inventario.models import Producto, VarianteProducto
-from apps_privadas.seguridad.models import Usuario
+from apps_privadas.seguridad.models.usuario import Usuario
 
 REPORT_CONFIG = {
     "modelos": {

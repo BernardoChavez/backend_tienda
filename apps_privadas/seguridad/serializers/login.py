@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
-from apps_privadas.seguridad.models import Usuario
 
 
 class LoginSerializer(serializers.Serializer):
@@ -20,12 +19,12 @@ class LoginSerializer(serializers.Serializer):
 
         if usuario is None:
             raise serializers.ValidationError(
-                "Usuario o contraseña incorrectos"
+                "Usuario o contrasena incorrectos"
             )
 
         if not usuario.is_active:
             raise serializers.ValidationError(
-                "Este usuario está desactivado"
+                "Este usuario esta desactivado"
             )
 
         data['usuario'] = usuario

@@ -4,7 +4,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from datetime import timedelta
 from apps_publicas.empresas.models import Empresa, Dominio, Plan, Suscripcion, SuscripcionCambio, EstadoSuscripcion, CicloSuscripcion
-from apps_privadas.seguridad.models import Usuario
+from apps_privadas.seguridad.models.usuario import Usuario
 import re
 import os
 import threading
@@ -414,4 +414,3 @@ class SuscripcionCambioService:
         if suscripcion_id:
             queryset = queryset.filter(suscripcion_id=suscripcion_id)
         return queryset
-
