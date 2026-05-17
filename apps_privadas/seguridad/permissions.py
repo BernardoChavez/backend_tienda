@@ -96,3 +96,16 @@ class IsStaffUser(BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_staff
 
+
+class CanViewCatalogo(BasePermission):
+    """Permite solo si el usuario tiene inventario.view_catalogo."""
+
+    def has_permission(self, request, view):
+        return request.user and request.user.has_perm('inventario.view_catalogo')
+
+
+class CanViewProductoDetalle(BasePermission):
+    """Permite solo si el usuario tiene inventario.view_producto_detalle."""
+
+    def has_permission(self, request, view):
+        return request.user and request.user.has_perm('inventario.view_producto_detalle')

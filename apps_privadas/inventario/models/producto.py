@@ -22,6 +22,10 @@ class Producto(models.Model):
         ordering = ['nombre']
         verbose_name = 'Producto'
         verbose_name_plural = 'Productos'
+        permissions = [
+            ('view_catalogo', 'Puede ver el catalogo'),
+            ('view_producto_detalle', 'Puede ver detalle de producto'),
+        ]
 
     def __str__(self):
         return self.nombre

@@ -61,17 +61,24 @@ class MultimedioViewSet(viewsets.ModelViewSet):
         data = serializer.validated_data
         archivo = data.pop('archivo')
         producto_id = data.pop('producto_id')
+        tipo = data.get('tipo', 'imagen')
 
         try:
-            result = CloudinaryService.upload_image(
-                archivo,
-                folder='tienda/productos'
-            )
+            if tipo == 'realidad_aumentada':
+                result = CloudinaryService.upload_raw(
+                    archivo,
+                    folder='tienda/productos'
+                )
+            else:
+                result = CloudinaryService.upload_image(
+                    archivo,
+                    folder='tienda/productos'
+                )
 
             instance = self.model.objects.create(
                 producto_id=producto_id,
                 archivo_url=result['secure_url'],
-                tipo=data.get('tipo', 'imagen'),
+                tipo=tipo,
                 es_principal=data.get('es_principal', False),
                 orden=data.get('orden', 0)
             )
@@ -120,10 +127,16 @@ class MultimedioViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            result = CloudinaryService.upload_image(
-                archivo,
-                folder='tienda/productos'
-            )
+            if instance.tipo == 'realidad_aumentada':
+                result = CloudinaryService.upload_raw(
+                    archivo,
+                    folder='tienda/productos'
+                )
+            else:
+                result = CloudinaryService.upload_image(
+                    archivo,
+                    folder='tienda/productos'
+                )
 
             instance.archivo_url = result['secure_url']
             instance.save()
@@ -159,7 +172,10 @@ class MultimedioViewSet(viewsets.ModelViewSet):
 
         if public_id:
             try:
-                CloudinaryService.delete_image(public_id)
+                if instance.tipo == 'realidad_aumentada':
+                    CloudinaryService.delete_raw(public_id)
+                else:
+                    CloudinaryService.delete_image(public_id)
             except Exception as e:
                 print(f"ERROR deleting from Cloudinary: {e}")
 

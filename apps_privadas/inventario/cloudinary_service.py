@@ -74,6 +74,28 @@ class CloudinaryService:
         }
     
     @classmethod
+    def upload_raw(cls, file, folder='tienda/productos', public_id=None):
+        """Sube un archivo no imagen (ej. .glb/.gltf) a Cloudinary."""
+        cls.configure()
+
+        upload_kwargs = {
+            'folder': folder,
+            'resource_type': 'raw'
+        }
+
+        if public_id:
+            upload_kwargs['public_id'] = public_id
+
+        result = cloudinary.uploader.upload(file, **upload_kwargs)
+
+        return {
+            'url': result.get('url'),
+            'public_id': result.get('public_id'),
+            'secure_url': result.get('secure_url'),
+            'format': result.get('format')
+        }
+
+    @classmethod
     def delete_image(cls, public_id):
         """
         Elimina una imagen de Cloudinary.
@@ -86,7 +108,13 @@ class CloudinaryService:
         """
         cls.configure()
         return cloudinary.uploader.destroy(public_id)
-    
+
+    @classmethod
+    def delete_raw(cls, public_id):
+        """Elimina un archivo raw de Cloudinary."""
+        cls.configure()
+        return cloudinary.uploader.destroy(public_id, resource_type='raw')
+
     @classmethod
     def get_image_url(cls, public_id, transformation=None):
         """

@@ -14,6 +14,7 @@ class ProductoSerializer(serializers.ModelSerializer):
     categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
     marca_nombre = serializers.CharField(source='marca.nombre', read_only=True)
     imagenes = serializers.SerializerMethodField()
+    modelos_3d = serializers.SerializerMethodField()
 
     precio_minimo = serializers.SerializerMethodField()
     imagen_principal = serializers.SerializerMethodField()
@@ -22,15 +23,19 @@ class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = [
-            'id', 'nombre', 'descripcion', 'activo', 
-            'categoria', 'categoria_nombre', 'marca', 'marca_nombre', 
-            'imagenes', 'precio_minimo', 'imagen_principal'
+            'id', 'nombre', 'descripcion', 'activo',
+            'categoria', 'categoria_nombre', 'marca', 'marca_nombre',
+            'imagenes', 'modelos_3d', 'precio_minimo', 'imagen_principal'
         ]
         read_only_fields = ['id']
 
 
     def get_imagenes(self, obj):
         multimedia = Multimedio.objects.filter(producto=obj, tipo='imagen')
+        return MultimedioSimpleSerializer(multimedia, many=True).data
+
+    def get_modelos_3d(self, obj):
+        multimedia = Multimedio.objects.filter(producto=obj, tipo='realidad_aumentada')
         return MultimedioSimpleSerializer(multimedia, many=True).data
 
     def get_precio_minimo(self, obj):

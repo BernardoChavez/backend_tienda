@@ -6,6 +6,8 @@ from apps_privadas.inventario.views import (
     ProductoViewSet,
     VarianteProductoViewSet,
     MultimedioViewSet,
+    CatalogoViewSet,
+    ProductoDetalleViewSet,
 )
 
 router = DefaultRouter()
@@ -14,6 +16,8 @@ router.register(r'marcas', MarcaViewSet, basename='marca')
 router.register(r'productos', ProductoViewSet, basename='producto')
 router.register(r'variantes', VarianteProductoViewSet, basename='variante-producto')
 router.register(r'multimedios', MultimedioViewSet, basename='multimedio')
+router.register(r'catalogo', CatalogoViewSet, basename='catalogo')
+router.register(r'productos-detalle', ProductoDetalleViewSet, basename='producto-detalle')
 
 app_name = 'inventario'
 

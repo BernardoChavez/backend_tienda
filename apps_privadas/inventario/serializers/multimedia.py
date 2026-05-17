@@ -18,6 +18,14 @@ class MultimedioConArchivoSerializer(serializers.Serializer):
     orden = serializers.IntegerField(default=0)
     producto_id = serializers.IntegerField()
 
+    def validate_archivo(self, value):
+        tipo = self.initial_data.get('tipo')
+        if tipo == 'realidad_aumentada':
+            nombre = getattr(value, 'name', '')
+            if not nombre.lower().endswith(('.glb', '.gltf')):
+                raise serializers.ValidationError('Solo se permite .glb o .gltf para realidad aumentada')
+        return value
+
     def validate_producto_id(self, value):
         from apps_privadas.inventario.models import Producto
         if not Producto.objects.filter(id=value).exists():
