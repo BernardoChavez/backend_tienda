@@ -12,6 +12,7 @@ from apps_privadas.inventario.serializers import (
     ActualizarProductoSerializer
 )
 from apps_privadas.inventario.cloudinary_service import CloudinaryService
+from apps_privadas.inventario.services.embedding_client import generar_embedding_sync
 
 
 class ProductoViewSet(BaseViewSet):
@@ -47,6 +48,9 @@ class ProductoViewSet(BaseViewSet):
             **serializer.validated_data
         )
 
+        generar_embedding_sync(instance)
+        instance.refresh_from_db()
+
         return Response(
             self.serializer_class(instance).data,
             status=status.HTTP_201_CREATED
@@ -70,6 +74,9 @@ class ProductoViewSet(BaseViewSet):
         for key, value in data.items():
             setattr(instance, key, value)
         instance.save()
+
+        generar_embedding_sync(instance)
+        instance.refresh_from_db()
 
         return Response(
             self.serializer_class(instance).data,
@@ -103,10 +110,16 @@ class ProductoViewSet(BaseViewSet):
         if producto.embedding is None:
             return Response([])
 
+        umbral = float(request.query_params.get('umbral', 0.5))
+
         similares = Producto.objects.select_related('categoria', 'marca') \
             .exclude(id=producto.id) \
             .filter(embedding__isnull=False, activo=True) \
-            .order_by(CosineDistance('embedding', producto.embedding))[:10]
+            .annotate(
+                _distancia=CosineDistance('embedding', producto.embedding)
+            ) \
+            .filter(_distancia__lt=umbral) \
+            .order_by('_distancia')[:10]
 
         return Response(
             ProductoSerializer(similares, many=True).data
