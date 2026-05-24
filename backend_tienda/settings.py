@@ -236,6 +236,9 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@tienda.com')
 
+# Configuración del servicio de embeddings
+EMBEDDING_SERVICE_URL = env('EMBEDDING_SERVICE_URL', default='')
+
 # Configuración de Swagger (drf-spectacular)
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Backend Tienda API',

@@ -1,4 +1,5 @@
 from django.db import models
+from pgvector.django import VectorField
 from apps_privadas.inventario.models.categoria import Categoria
 from apps_privadas.inventario.models.marca import Marca
 
@@ -16,6 +17,17 @@ class Producto(models.Model):
         Marca,
         on_delete=models.CASCADE,
         related_name='productos'
+    )
+    embedding = VectorField(dimensions=1024, null=True, blank=True)
+    embedding_sync_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pendiente'),
+            ('processing', 'Procesando'),
+            ('completed', 'Completado'),
+            ('failed', 'Fallido'),
+        ],
+        default='pending'
     )
 
     class Meta:
