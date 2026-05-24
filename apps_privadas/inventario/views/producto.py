@@ -1,3 +1,4 @@
+from pgvector.django import CosineDistance
 from apps_privadas.inventario.views.base import BaseViewSet
 from rest_framework import status, filters
 
@@ -95,3 +96,18 @@ class ProductoViewSet(BaseViewSet):
 
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['get'])
+    def recomendados(self, request, pk=None):
+        producto = self.get_object()
+        if producto.embedding is None:
+            return Response([])
+
+        similares = Producto.objects.select_related('categoria', 'marca') \
+            .exclude(id=producto.id) \
+            .filter(embedding__isnull=False, activo=True) \
+            .order_by(CosineDistance('embedding', producto.embedding))[:10]
+
+        return Response(
+            ProductoSerializer(similares, many=True).data
+        )
