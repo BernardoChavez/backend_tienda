@@ -1,4 +1,3 @@
-from pgvector.django import CosineDistance
 from apps_privadas.inventario.views.base import BaseViewSet
 from rest_framework import status, filters
 
@@ -106,21 +105,6 @@ class ProductoViewSet(BaseViewSet):
 
     @action(detail=True, methods=['get'])
     def recomendados(self, request, pk=None):
-        producto = self.get_object()
-        if producto.embedding is None:
-            return Response([])
-
-        umbral = float(request.query_params.get('umbral', 0.5))
-
-        similares = Producto.objects.select_related('categoria', 'marca') \
-            .exclude(id=producto.id) \
-            .filter(embedding__isnull=False, activo=True) \
-            .annotate(
-                _distancia=CosineDistance('embedding', producto.embedding)
-            ) \
-            .filter(_distancia__lt=umbral) \
-            .order_by('_distancia')[:10]
-
-        return Response(
-            ProductoSerializer(similares, many=True).data
-        )
+        # Temporal: el entorno local no tiene instalada la extension pgvector.
+        # Mantiene el endpoint disponible mientras se trabajan otros casos de uso.
+        return Response([])

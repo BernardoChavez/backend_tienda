@@ -58,7 +58,7 @@ class ClienteService:
             # Asignar al grupo Cliente
             cliente.groups.add(grupo_cliente)
 
-            print(f"✓ Cliente registrado: {cliente.username}")
+            print(f"OK Cliente registrado: {cliente.username}")
             print(f"  Nombre: {cliente.nombre_completo}")
             print(f"  Grupo: {grupo_cliente.name}")
 
@@ -71,7 +71,7 @@ class ClienteService:
             }
 
         except Exception as e:
-            print(f"❌ Error registrando cliente: {str(e)}")
+            print(f"ERROR registrando cliente: {str(e)}")
             return {
                 'success': False,
                 'error': f'Error registrando cliente: {str(e)}'

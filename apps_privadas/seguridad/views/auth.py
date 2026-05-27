@@ -12,6 +12,14 @@ from apps_privadas.seguridad.serializers.recuperacion import (
     CambiarPasswordSerializer,
 )
 from apps_privadas.seguridad.services.recuperacion_password import RecuperacionPasswordService
+from apps_privadas.seguridad.services.auditoria import registrar_bitacora
+
+
+def _get_client_ip(request):
+    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
 
 
 @api_view(['POST'])
@@ -77,9 +85,20 @@ def login(request):
             permisos = [f'{app}.{perm}' for app, perm in permisos]
             permisos = list(set(permisos))
 
-        print(f"✓ Login exitoso: {usuario.username} (ID: {usuario.id})")
+        print(f"OK Login exitoso: {usuario.username} (ID: {usuario.id})")
         print(f"  Roles: {roles}")
         print(f"  Permisos: {len(permisos)} permisos")
+
+        registrar_bitacora(
+            usuario_id=usuario.id,
+            entidad='seguridad.login',
+            accion='LOGIN',
+            detalles=f"Login exitoso para usuario {usuario.username}",
+            metodo=request.method,
+            ruta=request.path,
+            ip_cliente=_get_client_ip(request),
+            estado_http=status.HTTP_200_OK,
+        )
 
         return Response({
             'success': True,
@@ -93,7 +112,17 @@ def login(request):
             'permisos': permisos
         }, status=status.HTTP_200_OK)
 
-    print(f"✗ Login fallido: {serializer.errors}")
+    print(f"ERROR Login fallido: {serializer.errors}")
+    registrar_bitacora(
+        usuario_id=0,
+        entidad='seguridad.login',
+        accion='LOGIN_FALLIDO',
+        detalles=f"Login fallido para usuario {request.data.get('username', '')}",
+        metodo=request.method,
+        ruta=request.path,
+        ip_cliente=_get_client_ip(request),
+        estado_http=status.HTTP_400_BAD_REQUEST,
+    )
     return Response({
         'success': False,
         'error': serializer.errors.get('non_field_errors', ['Error desconocido'])[0]

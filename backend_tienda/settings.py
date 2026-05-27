@@ -62,6 +62,7 @@ TENANT_APPS = [
     'apps_privadas.venta',
     'apps_privadas.reportes',
     'apps_privadas.carrito',
+    'apps_privadas.notificaciones',
 
     'rest_framework',
     'rest_framework_simplejwt',
@@ -108,6 +109,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps_privadas.seguridad.middleware.AuditoriaMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -238,6 +240,11 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@tienda.com')
 
 # Configuración del servicio de embeddings
 EMBEDDING_SERVICE_URL = env('EMBEDDING_SERVICE_URL', default='')
+
+# Configuracion Web Push. Requerida para envio real de notificaciones push.
+VAPID_PUBLIC_KEY = env('VAPID_PUBLIC_KEY', default='')
+VAPID_PRIVATE_KEY = env('VAPID_PRIVATE_KEY', default='')
+VAPID_ADMIN_EMAIL = env('VAPID_ADMIN_EMAIL', default='')
 
 # Configuración de Swagger (drf-spectacular)
 SPECTACULAR_SETTINGS = {

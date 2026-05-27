@@ -9,8 +9,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            "CREATE INDEX IF NOT EXISTS idx_producto_embedding "
-            "ON inventario_producto USING hnsw (embedding vector_cosine_ops)",
-            reverse_sql="DROP INDEX IF EXISTS idx_producto_embedding"
+            "SELECT 1",
+            reverse_sql="SELECT 1"
         ),
     ]

@@ -47,4 +47,7 @@ urlpatterns = [
 
     # Carrito: /api/carrito/
     path('api/carrito/', include('apps_privadas.carrito.urls')),
+
+    # Notificaciones y promociones: /api/notificaciones/, /api/promociones/
+    path('api/', include('apps_privadas.notificaciones.urls')),
 ]
