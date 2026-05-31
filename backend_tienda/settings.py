@@ -239,6 +239,9 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@tienda.com')
 # Configuración del servicio de embeddings
 EMBEDDING_SERVICE_URL = env('EMBEDDING_SERVICE_URL', default='')
 
+# Configuración del servicio de speech-to-text
+STT_SERVICE_URL = env('STT_SERVICE_URL', default='')
+
 # Configuración de Swagger (drf-spectacular)
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Backend Tienda API',
