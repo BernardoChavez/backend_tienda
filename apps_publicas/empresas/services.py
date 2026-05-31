@@ -147,7 +147,7 @@ class EmpresaRegistroService:
                 is_active=True
             )
 
-            print(f"✓ Empresa creada: {empresa.nombre} (ID: {empresa.id})")
+            print(f"OK Empresa creada: {empresa.nombre} (ID: {empresa.id})")
             print(f"  Schema: {empresa.schema_name}")
 
             # 2. Crear el dominio
@@ -157,7 +157,7 @@ class EmpresaRegistroService:
                 is_primary=True
             )
 
-            print(f"✓ Dominio creado: {dominio.domain}")
+            print(f"OK Dominio creado: {dominio.domain}")
 
             # 3. Crear suscripcion inicial en el esquema public
             SuscripcionService.crear_suscripcion({
@@ -184,7 +184,7 @@ class EmpresaRegistroService:
             email = str(email).strip()
             password = str(password).strip()
             
-            print(f"📝 Datos para crear super admin:")
+            print(f"Datos para crear super admin:")
             print(f"  Username: {username}")
             print(f"  Email: {email}")
             print(f"  Password: {'*' * len(password)}")
@@ -204,7 +204,7 @@ class EmpresaRegistroService:
                     apellido=apellido.capitalize()
                 )
 
-                print(f"✓ Super admin creado: {super_admin.username} en schema {schema_name}")
+                print(f"OK Super admin creado: {super_admin.username} en schema {schema_name}")
 
             # 5. Enviar correo al super admin
             try:
@@ -230,7 +230,7 @@ class EmpresaRegistroService:
                     [email]
                 ).start()
             except Exception as exc:
-                print(f"⚠️ No se pudo enviar el correo: {str(exc)}")
+                print(f"WARNING No se pudo enviar el correo: {str(exc)}")
 
             # Retornar respuesta exitosa
             return {
@@ -255,7 +255,7 @@ class EmpresaRegistroService:
             }
         except Exception as e:
             # Error inesperado
-            print(f"❌ Error creando empresa: {str(e)}")
+            print(f"ERROR creando empresa: {str(e)}")
             return {
                 'success': False,
                 'error': f"Error creando la empresa: {str(e)}"

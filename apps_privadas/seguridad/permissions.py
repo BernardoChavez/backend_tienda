@@ -61,7 +61,7 @@ class HasModelPermission(BasePermission):
 
         # Obtener el modelo del ViewSet
         queryset = getattr(view, 'queryset', None)
-        if not queryset:
+        if queryset is None:
             # Si no hay queryset, no podemos determinar el permiso
             return True
 

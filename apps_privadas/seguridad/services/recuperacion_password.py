@@ -78,7 +78,7 @@ class RecuperacionPasswordService:
                 fail_silently=False,
             )
 
-            print(f"✓ Codigo de recuperacion enviado a {usuario.email}")
+            print(f"OK Codigo de recuperacion enviado a {usuario.email}")
 
             # Ocultar parte del email por seguridad (ej: hr****@gmail.com)
             email = usuario.email
@@ -91,7 +91,7 @@ class RecuperacionPasswordService:
             }
 
         except Exception as e:
-            print(f"❌ Error enviando codigo de recuperacion: {str(e)}")
+            print(f"ERROR enviando codigo de recuperacion: {str(e)}")
             return {
                 'success': False,
                 'error': f'Error al enviar el correo: {str(e)}'
@@ -138,7 +138,7 @@ class RecuperacionPasswordService:
             }
 
         except Exception as e:
-            print(f"❌ Error verificando codigo: {str(e)}")
+            print(f"ERROR verificando codigo: {str(e)}")
             return {
                 'success': False,
                 'error': f'Error al verificar el codigo: {str(e)}'
@@ -187,7 +187,7 @@ class RecuperacionPasswordService:
             registro.usado = True
             registro.save()
 
-            print(f"✓ Contrasena cambiada para {usuario.username}")
+            print(f"OK Contrasena cambiada para {usuario.username}")
 
             return {
                 'success': True,
@@ -195,7 +195,7 @@ class RecuperacionPasswordService:
             }
 
         except Exception as e:
-            print(f"❌ Error cambiando contrasena: {str(e)}")
+            print(f"ERROR cambiando contrasena: {str(e)}")
             return {
                 'success': False,
                 'error': f'Error al cambiar la contrasena: {str(e)}'

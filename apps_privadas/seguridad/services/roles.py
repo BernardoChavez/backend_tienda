@@ -23,7 +23,7 @@ class RolService:
                 permisos = Permission.objects.filter(id__in=permisos_ids)
                 rol.permissions.set(permisos)
 
-            print(f"✓ Rol creado: {rol.name}")
+            print(f"OK Rol creado: {rol.name}")
 
             return {
                 'success': True,
@@ -93,7 +93,7 @@ class RolService:
 
             rol.save()
 
-            print(f"✓ Rol actualizado: {rol.name}")
+            print(f"OK Rol actualizado: {rol.name}")
 
             return {
                 'success': True,
@@ -122,7 +122,7 @@ class RolService:
             nombre = rol.name
             rol.delete()
 
-            print(f"✓ Rol eliminado: {nombre}")
+            print(f"OK Rol eliminado: {nombre}")
 
             return {
                 'success': True,

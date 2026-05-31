@@ -52,7 +52,7 @@ class UsuarioService:
             # Asignar al grupo
             usuario.groups.add(grupo)
 
-            print(f"✓ Usuario creado: {usuario.username}")
+            print(f"OK Usuario creado: {usuario.username}")
             print(f"  Grupo: {grupo.name}")
 
             return {
@@ -64,7 +64,7 @@ class UsuarioService:
             }
 
         except Exception as e:
-            print(f"❌ Error creando usuario: {str(e)}")
+            print(f"ERROR creando usuario: {str(e)}")
             return {
                 'success': False,
                 'error': f'Error creando usuario: {str(e)}'
@@ -120,7 +120,7 @@ class UsuarioService:
 
             usuario.save()
 
-            print(f"✓ Usuario actualizado: {usuario.username}")
+            print(f"OK Usuario actualizado: {usuario.username}")
 
             return {
                 'success': True,
@@ -130,7 +130,7 @@ class UsuarioService:
             }
 
         except Exception as e:
-            print(f"❌ Error actualizando usuario: {str(e)}")
+            print(f"ERROR actualizando usuario: {str(e)}")
             return {
                 'success': False,
                 'error': f'Error actualizando usuario: {str(e)}'
@@ -187,7 +187,7 @@ class UsuarioService:
             usuario.is_active = False
             usuario.save()
 
-            print(f"✓ Usuario desactivado: {usuario.username}")
+            print(f"OK Usuario desactivado: {usuario.username}")
 
             return {
                 'success': True,

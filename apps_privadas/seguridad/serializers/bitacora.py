@@ -16,5 +16,9 @@ class BitacoraAuditoriaSerializer(serializers.ModelSerializer):
             'detalles',
             'accion',
             'usuarios_id',
+            'metodo',
+            'ruta',
+            'ip_cliente',
+            'estado_http',
         ]
         read_only_fields = fields

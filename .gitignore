@@ -2,6 +2,7 @@
 # ENTORNOS VIRTUALES
 # ============================================================================
 venv/
+venv312/
 ENV/
 env/
 .venv
@@ -96,6 +97,7 @@ db.sqlite3-journal
 # VARIABLES DE ENTORNO
 # ============================================================================
 .env
+.env.backup-temporal
 .env.local
 .env.*.local
 env.py

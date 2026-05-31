@@ -33,3 +33,4 @@ urllib3==2.6.3
 whitenoise==6.12.0
 
 pgvector==0.4.2
+pywebpush==2.3.0

@@ -107,7 +107,7 @@ class CarritoViewSet(viewsets.ModelViewSet):
         serializer = CarritoSerializer(carrito)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'post'])
     def descargar_pdf(self, request):
         """Generar y descargar cotización en PDF"""
         carrito = get_object_or_404(Carrito, usuario=request.user)
@@ -122,12 +122,21 @@ class CarritoViewSet(viewsets.ModelViewSet):
         # Obtener datos de la empresa (tenant actual)
         empresa = connection.tenant
         
-        pdf_buffer = generar_pdf_cotizacion(carrito, empresa)
+        # Obtener datos de configuración personalizados enviados desde el frontend (si los hay)
+        custom_config = {}
+        if request.method == 'POST':
+            custom_config = request.data
+        else:
+            custom_config = request.query_params.dict()
+            
+        pdf_buffer = generar_pdf_cotizacion(carrito, empresa, custom_config)
+        
+        nombre_empresa = custom_config.get('nombre') or empresa.nombre
         
         return FileResponse(
             pdf_buffer,
             as_attachment=True,
             content_type='application/pdf',
-            filename=f"Cotizacion_{empresa.nombre}_{datetime.now().strftime('%Y%m%d')}.pdf"
+            filename=f"Cotizacion_{nombre_empresa}_{datetime.now().strftime('%Y%m%d')}.pdf"
         )
 

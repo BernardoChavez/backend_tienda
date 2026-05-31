@@ -9,6 +9,10 @@ class BitacoraAuditoria(models.Model):
     detalles = models.CharField(max_length=500)
     accion = models.CharField(max_length=100)
     usuarios_id = models.BigIntegerField(db_column='usuarios_id')
+    metodo = models.CharField(max_length=10, blank=True, null=True)
+    ruta = models.CharField(max_length=255, blank=True, null=True)
+    ip_cliente = models.GenericIPAddressField(blank=True, null=True)
+    estado_http = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False
