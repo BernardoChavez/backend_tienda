@@ -11,7 +11,7 @@ class Command(BaseCommand):
     help = 'Procesa embeddings pendientes de productos de todos los tenants'
 
     def handle(self, *args, **options):
-        tenants = Empresa.objects.all()
+        tenants = Empresa.objects.exclude(schema_name='public')
         self.stdout.write(f"Tenants encontrados: {tenants.count()}")
 
         for tenant in tenants:

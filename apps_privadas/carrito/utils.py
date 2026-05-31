@@ -6,7 +6,10 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.units import inch
 from datetime import datetime
 
-def generar_pdf_cotizacion(carrito, empresa):
+def generar_pdf_cotizacion(carrito, empresa, custom_config=None):
+    if custom_config is None:
+        custom_config = {}
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
     styles = getSampleStyleSheet()
@@ -23,9 +26,41 @@ def generar_pdf_cotizacion(carrito, empresa):
     
     elements = []
 
+    # Cargar datos de la empresa (personalizados o por defecto)
+    nombre_empresa = custom_config.get('nombre') or empresa.nombre
+    direccion = custom_config.get('direccion')
+    telefono = custom_config.get('telefono')
+    email = custom_config.get('email') or empresa.correo
+
+    # Intentar cargar y renderizar el logo si está en Base64
+    logo_base64 = custom_config.get('logoUrl')
+    if logo_base64 and isinstance(logo_base64, str) and logo_base64.startswith('data:image/'):
+        try:
+            import base64
+            # Extraer el contenido base64 (removiendo el header data:image/...;base64,)
+            header, encoded = logo_base64.split(",", 1)
+            data_bytes = base64.b64decode(encoded)
+            logo_io = io.BytesIO(data_bytes)
+            
+            # Crear la imagen con ReportLab
+            logo_img = Image(logo_io, width=1.0*inch, height=1.0*inch)
+            logo_img.hAlign = 'CENTER'
+            elements.append(logo_img)
+            elements.append(Spacer(1, 0.1 * inch))
+        except Exception as e:
+            print("Error rendering logo in PDF:", e)
+
     # Encabezado
     elements.append(Paragraph(f"COTIZACIÓN FORMAL", style_title))
-    elements.append(Paragraph(f"<b>Empresa:</b> {empresa.nombre}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Empresa:</b> {nombre_empresa}", styles['Normal']))
+    
+    if direccion:
+        elements.append(Paragraph(f"<b>Dirección:</b> {direccion}", styles['Normal']))
+    if telefono:
+        elements.append(Paragraph(f"<b>Teléfono:</b> {telefono}", styles['Normal']))
+    if email:
+        elements.append(Paragraph(f"<b>Contacto:</b> {email}", styles['Normal']))
+        
     elements.append(Paragraph(f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
     elements.append(Paragraph(f"<b>Cliente:</b> {carrito.usuario.nombre} {carrito.usuario.apellido} ({carrito.usuario.username})", styles['Normal']))
     elements.append(Spacer(1, 0.25 * inch))
