@@ -9,7 +9,11 @@ class LLMTraductorReportes:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.url = "https://openrouter.ai/api/v1/chat/completions"
-        self.model = "openrouter/free"
+        self.modelos = [
+            "openai/gpt-oss-20b:free",
+            "google/gemma-2-9b-it:free",
+            "meta-llama/llama-3.2-3b-instruct:free",
+        ]
 
     def traducir_texto_a_json(self, texto_usuario: str) -> dict:
         vistas = list(REPORT_CONFIG["modelos"].keys())
@@ -23,17 +27,22 @@ class LLMTraductorReportes:
             "Content-Type": "application/json"
         }
 
-        payload = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.1,
-            "response_format": {"type": "json_object"}
-        }
-
         ultimo_error = None
-        for intento in range(3):
+        for modelo in self.modelos:
+            payload = {
+                "model": modelo,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+                "response_format": {"type": "json_object"}
+            }
+
             try:
-                response = requests.post(self.url, headers=headers, json=payload, timeout=30)
+                print(f"[DEBUG LLM] Intentando modelo: {modelo}")
+                start = time.time()
+                response = requests.post(self.url, headers=headers, json=payload, timeout=60)
+                elapsed = time.time() - start
+                print(f"[TIMING LLM] {modelo} respondió en {elapsed:.2f}s (status={response.status_code})")
+
                 response.raise_for_status()
 
                 res_json = response.json()
@@ -46,36 +55,38 @@ class LLMTraductorReportes:
 
             except requests.exceptions.HTTPError as e:
                 status_code = e.response.status_code if hasattr(e, 'response') else 0
-                if status_code == 429:
-                    espera = (intento + 1) * 3
-                    print(f"[DEBUG LLM] Rate limited (429), reintentando en {espera}s (intento {intento + 1}/3)")
-                    time.sleep(espera)
-                    ultimo_error = e
-                    continue
-                raise Exception(f"Error HTTP {status_code} de la IA: {str(e)}")
+                print(f"[WARN LLM] {modelo} falló con HTTP {status_code}: {e}")
+                ultimo_error = e
+                continue
             except requests.exceptions.Timeout:
-                espera = (intento + 1) * 3
-                print(f"[DEBUG LLM] Timeout, reintentando en {espera}s (intento {intento + 1}/3)")
-                time.sleep(espera)
+                print(f"[WARN LLM] {modelo} excedió timeout de 60s")
                 ultimo_error = e
                 continue
             except json.JSONDecodeError as e:
-                raise Exception(f"La IA devolvió un formato inválido: {str(e)}")
+                print(f"[WARN LLM] {modelo} devolvió JSON inválido: {e}")
+                ultimo_error = e
+                continue
             except Exception as e:
-                raise Exception(f"Falla en la comunicación con la IA: {str(e)}")
+                print(f"[WARN LLM] {modelo} falló: {e}")
+                ultimo_error = e
+                continue
 
-        raise Exception(f"La IA no respondió después de 3 intentos. Último error: {str(ultimo_error)}")
+        raise Exception(f"Todos los modelos fallaron. Último error: {ultimo_error}")
 
     def _construir_prompt(self, vistas, mapa_campos, texto_usuario) -> str:
         ejemplos = self._obtener_ejemplos()
-        combinaciones = self._obtener_combinaciones()
-        capacidades = self._obtener_capacidades()
-
         return f"""Eres un traductor de lenguaje natural a JSON para un sistema de reportes de e-commerce.
 
-{capacidades}
-
-{combinaciones}
+CAPACIDADES DEL MOTOR:
+- GROUP BY: usa 'agrupar_por' con lista de campos
+- Agregaciones: 'metricas_agrupadas' [{{campo, operacion, alias}}]
+- Operadores: sum, count, avg, min, max
+- Filtros WHERE: 'filtros' [{{campo, operador, valor}}]
+- Operadores fecha: exact, month, year, day, gte, lte, gt, lt
+- Filtros HAVING: 'filtros_having' [{{alias, operador, valor}}]
+- Ventana: 'ventana' {{funcion, partition_by, orden, alias}} con RANK o ROW_NUMBER
+- Orden: campo (asc) o -campo (desc)
+- Paginacion: 'paginacion' {{pagina, cantidad_por_pagina}}
 
 VISTAS DISPONIBLES: {vistas}
 
@@ -85,140 +96,59 @@ CAMPOS POR VISTA:
 {ejemplos}
 
 REGLAS OBLIGATORIAS:
-1. Devuelve SOLO el JSON. Sin explicaciones, sin texto adicional.
-2. El JSON debe tener la estructura correcta con todos los campos requeridos.
-3. Usa 'vista_logica' con un valor de las VISTAS DISPONIBLES.
-4. Los campos en 'agrupar_por', 'filtros' y 'metricas_agrupadas' deben existir en CAMPOS POR VISTA.
-5. Para filtros de fecha usa: month, year, day como operador.
-6. Para filtros de agrupacion usa 'filtros_having'.
-7. Para ranking/posicion usa 'ventana' con 'funcion': RANK o ROW_NUMBER.
-8. Los operadores de metricas son: sum, count, avg, min, max.
-9. Ordenar: campo normal para ascendente, -campo para descendente.
+1. Devuelve SOLO el JSON. Sin explicaciones.
+2. Usa 'vista_logica' de las VISTAS DISPONIBLES.
+3. Los campos deben existir en CAMPOS POR VISTA.
+4. Operadores: sum, count, avg, min, max.
+5. Filtros fecha: month, year, day.
+6. Para posicion/ranking: 'ventana' con funcion RANK o ROW_NUMBER.
 
 PETICIÓN DEL USUARIO: "{texto_usuario}"
 
 Responde SOLO con el JSON."""
 
-    def _obtener_capacidades(self) -> str:
-        return """CAPACIDADES DEL MOTOR:
-- GROUP BY: usa 'agrupar_por' con lista de campos
-- Agregaciones: 'metricas_agrupadas' [{campo, operacion, alias}]
-- Operadores: sum, count, avg, min, max
-- Filtros WHERE: 'filtros' [{campo, operador, valor}]
-- Operadores fecha: exact, month, year, day, gte, lte, gt, lt
-- Filtros HAVING: 'filtros_having' [{alias, operador, valor}]
-- Funciones ventana: 'ventana' {funcion, partition_by, orden, alias}
-- Funciones ventana: RANK, ROW_NUMBER, LAG, LEAD
-- Ordenamiento: 'ordenar_por' (campo o -campo)
-- Paginación: 'paginacion' {pagina, cantidad_por_pagina}"""
-
-    def _obtener_combinaciones(self) -> str:
-        return """COMBINACIONES VÁLIDAS DE TABLAS:
-
- - detalle_venta: acceso a cliente_nombre, cliente_apellido, producto_nombre, categoria_nombre, marca_nombre, venta_fecha
-  Útil para: productos más vendidos, clientes por cantidad comprada, ventas por categoría, ranking
-
- - venta: acceso a cliente_nombre, cliente_apellido, estado, tipo
-  Útil para: clientes por gasto, ventas por tipo/estado
-
- - detalle_compra: acceso a proveedor_nombre, compra_fecha, producto_nombre, categoria_nombre
-  Útil para: compras por producto, proveedores más comprados, gastos por proveedor
-
- - producto: acceso a categoria_nombre, marca_nombre, activo
-  Útil para: inventario por categoría/marca, productos activos
-
- - cliente: acceso a username, nombre, apellido, email
-
-ATENCIÓN: Las vistas 'categoria' y 'marca' NO existen. Usa detalle_venta o producto para reportes que involucren categorías o marcas."""
-
     def _obtener_ejemplos(self) -> str:
-        return """EJEMPLOS DE PAYLOADS VÁLIDOS:
+        return """EJEMPLOS:
 
-1. "Los 10 productos más vendidos de mayo":
-{{
+1. "Los 10 productos mas vendidos de mayo":
+{
   "vista_logica": "detalle_venta",
   "agrupar_por": ["producto_id", "producto_nombre", "categoria_nombre"],
   "metricas_agrupadas": [
-    {{"campo": "cantidad", "operacion": "sum", "alias": "total_vendido"}},
-    {{"campo": "precio_subtotal", "operacion": "sum", "alias": "ingresos"}}
+    {"campo": "cantidad", "operacion": "sum", "alias": "total_vendido"},
+    {"campo": "precio_subtotal", "operacion": "sum", "alias": "ingresos"}
   ],
   "filtros": [
-    {{"campo": "venta_fecha", "operador": "month", "valor": 5}},
-    {{"campo": "venta_estado", "operador": "exact", "valor": "completado"}}
+    {"campo": "venta_fecha", "operador": "month", "valor": 5},
+    {"campo": "venta_estado", "operador": "exact", "valor": "completado"}
   ],
   "ordenar_por": "-total_vendido",
-  "paginacion": {{"pagina": 1, "cantidad_por_pagina": 10}}
-}}
+  "paginacion": {"pagina": 1, "cantidad_por_pagina": 10}
+}
 
-2. "Clientes ordenados por gasto total":
-{{
+2. "Ventas de hoy":
+{
   "vista_logica": "venta",
-  "agrupar_por": ["usuario_id", "cliente_nombre", "cliente_apellido"],
-  "metricas_agrupadas": [
-    {{"campo": "precio_total", "operacion": "sum", "alias": "total_gastado"}},
-    {{"campo": "id", "operacion": "count", "alias": "num_ventas"}}
-  ],
-  "filtros": [{{"campo": "estado", "operador": "exact", "valor": "completado"}}],
-  "ordenar_por": "-total_gastado"
-}}
+  "filtros": [{"campo": "fecha", "operador": "gte", "valor": "2025-05-09"}],
+  "ordenar_por": "-fecha"
+}
 
-3. "Categorías con más de $5000 en ventas":
-{{
-  "vista_logica": "detalle_venta",
-  "agrupar_por": ["categoria_id", "categoria_nombre"],
-  "metricas_agrupadas": [
-    {{"campo": "precio_subtotal", "operacion": "sum", "alias": "ingresos"}}
-  ],
-  "filtros": [{{"campo": "venta_estado", "operador": "exact", "valor": "completado"}}],
-  "filtros_having": [{{"alias": "ingresos", "operador": "gte", "valor": 5000}}],
-  "ordenar_por": "-ingresos"
-}}
-
-4. "Top 3 productos por categoría":
-{{
+3. "Top 3 productos por categoria":
+{
   "vista_logica": "detalle_venta",
   "agrupar_por": ["producto_id", "producto_nombre", "categoria_nombre"],
   "metricas_agrupadas": [
-    {{"campo": "cantidad", "operacion": "sum", "alias": "total_vendido"}}
+    {"campo": "cantidad", "operacion": "sum", "alias": "total_vendido"}
   ],
-  "filtros": [{{"campo": "venta_estado", "operador": "exact", "valor": "completado"}}],
+  "filtros": [{"campo": "venta_estado", "operador": "exact", "valor": "completado"}],
   "ordenar_por": "-total_vendido",
-  "ventana": {{
+  "ventana": {
     "funcion": "ROW_NUMBER",
     "partition_by": ["categoria_id"],
     "orden": "-total_vendido",
     "alias": "posicion"
-  }}
-}}
-
-5. "Ventas de hoy":
-{{
-  "vista_logica": "venta",
-  "filtros": [{{"campo": "fecha", "operador": "gte", "valor": "2025-05-09"}}],
-  "ordenar_por": "-fecha"
-}}
-
-6. "Proveedores más comprados":
-{{
-  "vista_logica": "compra",
-  "agrupar_por": ["proveedor_id", "proveedor_nombre"],
-  "metricas_agrupadas": [
-    {{"campo": "total", "operacion": "sum", "alias": "total_comprado"}},
-    {{"campo": "id", "operacion": "count", "alias": "num_compras"}}
-  ],
-  "ordenar_por": "-total_comprado"
-}}
-
-8. "Ganancias del mes por categoría":
-{{
-  "vista_logica": "detalle_venta",
-  "agrupar_por": ["categoria_id", "categoria_nombre"],
-  "metricas_agrupadas": [
-    {{"campo": "ganancia", "operacion": "sum", "alias": "ganancia_total"}}
-  ],
-  "filtros": [{{"campo": "venta_fecha", "operador": "month", "valor": 5}}],
-  "ordenar_por": "-ganancia_total"
-}}"""
+  }
+}"""
 
     def _validar_payload(self, payload: dict, mapa_campos: dict) -> dict:
         from ..config_reportes import REPORT_CONFIG

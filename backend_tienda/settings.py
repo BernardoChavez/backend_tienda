@@ -241,6 +241,8 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@tienda.com')
 # Configuración del servicio de embeddings
 EMBEDDING_SERVICE_URL = env('EMBEDDING_SERVICE_URL', default='')
 
+# Configuración del servicio de speech-to-text
+STT_SERVICE_URL = env('STT_SERVICE_URL', default='')
 # Configuracion Web Push. Requerida para envio real de notificaciones push.
 VAPID_PUBLIC_KEY = env('VAPID_PUBLIC_KEY', default='')
 VAPID_PRIVATE_KEY = env('VAPID_PRIVATE_KEY', default='')
