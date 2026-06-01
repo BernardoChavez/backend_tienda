@@ -26,12 +26,16 @@ class TenantBackupDownloadView(APIView):
         # Esquema del tenant activo, ej: "empresa_abc"
         schema_name = request.tenant.schema_name
 
+        print(f"=== BACKUP iniciado para schema: {schema_name} ===")
+
         db = settings.DATABASES['default']
         db_name = db['NAME']
         db_user = db['USER']
         db_host = db['HOST']
         db_port = str(db['PORT'])
         db_password = db['PASSWORD']
+
+        print(f"=== DB: {db_host}:{db_port}/{db_name} ===")
 
         # Archivo temporal donde pg_dump escribirá el backup
         tmp_file = tempfile.NamedTemporaryFile(
@@ -67,6 +71,8 @@ class TenantBackupDownloadView(APIView):
             )
 
             if result.returncode != 0:
+                print(f"PG_DUMP ERROR: {result.stderr}")
+                print(f"PG_DUMP STDOUT: {result.stdout}")
                 return Response(
                     {'error': 'pg_dump falló', 'detalle': result.stderr},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
