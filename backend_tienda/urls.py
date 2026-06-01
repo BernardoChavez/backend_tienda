@@ -1,3 +1,4 @@
+
 """
 URL configuration for backend_tienda project.
 
@@ -17,6 +18,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from apps_privadas.seguridad.views.backup import TenantBackupDownloadView
+from apps_privadas.seguridad.views.restore import TenantRestoreView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -32,6 +35,10 @@ urlpatterns = [
     # API privada (apps_privadas)
     # Seguridad: /api/usuarios/, /api/roles/, /api/login/
     path('api/', include('apps_privadas.seguridad.urls')),
+
+    # Backup y Restore por tenant: /api/seguridad/backup/, /api/seguridad/restore/
+    path('api/seguridad/backup/', TenantBackupDownloadView.as_view(), name='tenant-backup'),
+    path('api/seguridad/restore/', TenantRestoreView.as_view(), name='tenant-restore'),
 
     # Inventario: /api/categorias/, /api/productos/, /api/multimedios/
     path('api/', include('apps_privadas.inventario.urls')),
