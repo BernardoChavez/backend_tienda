@@ -9,6 +9,7 @@ from apps_privadas.seguridad.views.auth import (
     cambiar_password,
 )
 from apps_privadas.seguridad.views.bitacora import BitacoraAuditoriaViewSet
+from apps_privadas.seguridad.views.backup_automatico import AutomaticBackupSimulatedView
 
 # Router para ViewSets
 router = DefaultRouter()
@@ -20,6 +21,7 @@ app_name = 'seguridad'
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('backup/automatico/', AutomaticBackupSimulatedView.as_view(), name='backup-automatico'),
     path('login/', login, name='login'),
     path('recuperar-password/solicitar/', solicitar_recuperacion, name='recuperar-solicitar'),
     path('recuperar-password/verificar/', verificar_codigo, name='recuperar-verificar'),
