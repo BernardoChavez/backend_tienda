@@ -24,6 +24,10 @@ from apps_privadas.inventario.serializers.multimedia import (
     ActualizarMultimedioSerializer,
     MultimedioConArchivoSerializer
 )
+from apps_privadas.inventario.serializers.producto_favorito import (
+    ProductoFavoritoSerializer,
+    CrearProductoFavoritoSerializer,
+)
 
 __all__ = [
     'CategoriaSerializer',
@@ -42,4 +46,6 @@ __all__ = [
     'CrearMultimedioSerializer',
     'ActualizarMultimedioSerializer',
     'MultimedioConArchivoSerializer',
+    'ProductoFavoritoSerializer',
+    'CrearProductoFavoritoSerializer',
 ]
