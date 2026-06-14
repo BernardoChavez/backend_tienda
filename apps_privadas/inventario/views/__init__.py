@@ -5,6 +5,7 @@ from apps_privadas.inventario.views.variante_producto import VarianteProductoVie
 from apps_privadas.inventario.views.multimedia import MultimedioViewSet
 from apps_privadas.inventario.views.catalogo import CatalogoViewSet
 from apps_privadas.inventario.views.producto_detalle import ProductoDetalleViewSet
+from apps_privadas.inventario.views.producto_favorito import ProductoFavoritoViewSet
 
 __all__ = [
     'CategoriaViewSet',
@@ -14,4 +15,5 @@ __all__ = [
     'MultimedioViewSet',
     'CatalogoViewSet',
     'ProductoDetalleViewSet',
+    'ProductoFavoritoViewSet',
 ]
