@@ -1,3 +1,4 @@
+import calendar
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
@@ -88,12 +89,18 @@ def predecir_por_variante(fecha_hasta=None, forzar=False):
     if fecha_hasta:
         fecha_hasta_dt = pd.to_datetime(fecha_hasta).date()
         dias = max(1, (fecha_hasta_dt - hoy).days)
-        mes_pred = pd.to_datetime(fecha_hasta).month
+        meses_rango = pd.date_range(
+            start=pd.Timestamp(hoy.year, hoy.month, 1),
+            end=pd.Timestamp(fecha_hasta_dt.year, fecha_hasta_dt.month, 1),
+            freq='MS',
+        )
     else:
         dias = 30
-        mes_pred = (hoy.month % 12) + 1
-
-    trimestre_pred = ((mes_pred - 1) // 3) + 1
+        meses_rango = pd.date_range(
+            start=pd.Timestamp(hoy.year, hoy.month, 1),
+            periods=1,
+            freq='MS',
+        )
 
     if forzar or not modelo_vigente('random_forest'):
         entrenar_y_guardar()
@@ -129,14 +136,22 @@ def predecir_por_variante(fecha_hasta=None, forzar=False):
 
         categoria_enc = le_categoria.transform([categoria])[0]
 
-        X_pred = pd.DataFrame([{
-            'mes': mes_pred,
-            'trimestre': trimestre_pred,
-            'categoria_enc': categoria_enc,
-            'precio': float(ultima_fila['precio']),
-        }])
+        # Sumar la predicción de cada mes del rango
+        total = 0.0
+        total_dias_rango = 0
+        for mes_ts in meses_rango:
+            mes_p = mes_ts.month
+            X_pred = pd.DataFrame([{
+                'mes': mes_p,
+                'trimestre': ((mes_p - 1) // 3) + 1,
+                'categoria_enc': categoria_enc,
+                'precio': float(ultima_fila['precio']),
+            }])
+            total += max(0.0, modelo.predict(X_pred)[0])
+            total_dias_rango += calendar.monthrange(mes_ts.year, mes_p)[1]
 
-        unidades_proj = max(0, round(modelo.predict(X_pred)[0]))
+        # Escalar al número real de días solicitados
+        unidades_proj = round(total * dias / total_dias_rango) if total_dias_rango else 0
         stock = int(ultima_fila['stock_actual'])
         limite = int(ultima_fila['limite_minimo'])
         deficit = max(0, unidades_proj - stock)
