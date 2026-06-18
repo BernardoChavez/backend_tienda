@@ -1,3 +1,4 @@
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -14,6 +15,7 @@ class PrediccionDetalleView(APIView):
       fecha_hasta  — hasta qué fecha proyectar la demanda (YYYY-MM-DD).
                      Sin este param proyecta 30 días desde hoy.
       solo_alerta  — 'true' para mostrar solo variantes con déficit (default: false)
+      page         — número de página (default: 1)
     """
     permission_classes = [IsAuthenticated]
 
@@ -25,13 +27,12 @@ class PrediccionDetalleView(APIView):
 
         crear_alertas_demanda_alta(predicciones)
 
-        dias_proyectados = predicciones[0]['dias_proyectados'] if predicciones else 30
-
         if solo_alerta:
             predicciones = [p for p in predicciones if p['alerta']]
 
-        return Response({
-            'dias_proyectados': dias_proyectados,
-            'total': len(predicciones),
-            'predicciones': predicciones,
-        })
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(predicciones, request)
+        if page is not None:
+            return paginator.get_paginated_response(page)
+
+        return Response(predicciones)
