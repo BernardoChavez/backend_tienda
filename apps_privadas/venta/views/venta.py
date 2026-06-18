@@ -10,6 +10,7 @@ from apps_privadas.venta.serializers import (
     CrearVentaSerializer,
     ActualizarVentaSerializer,
 )
+from apps_privadas.ia.services.alertas_service import verificar_stock_post_venta
 
 
 class VentaViewSet(BaseViewSet):
@@ -49,6 +50,7 @@ class VentaViewSet(BaseViewSet):
 
             variante.cantidad -= cantidad
             variante.save()
+            verificar_stock_post_venta(variante)
 
             precio_subtotal = float(cantidad) * float(detalle['precio_unitario'])
             DetalleVenta.objects.create(

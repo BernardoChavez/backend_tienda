@@ -57,4 +57,7 @@ urlpatterns = [
 
     # Notificaciones y promociones: /api/notificaciones/, /api/promociones/
     path('api/', include('apps_privadas.notificaciones.urls')),
+
+    # IA: /api/ia/alertas/
+    path('api/', include('apps_privadas.ia.urls')),
 ]

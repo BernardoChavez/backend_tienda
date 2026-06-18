@@ -63,6 +63,7 @@ TENANT_APPS = [
     'apps_privadas.reportes',
     'apps_privadas.carrito',
     'apps_privadas.notificaciones',
+    'apps_privadas.ia',
 
     'rest_framework',
     'rest_framework_simplejwt',
@@ -191,6 +192,8 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
+
+IA_MODELO_HORAS_VIGENCIA = env.int('IA_MODELO_HORAS_VIGENCIA', default=24)
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
