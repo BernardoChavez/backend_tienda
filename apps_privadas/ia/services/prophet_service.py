@@ -60,11 +60,14 @@ def predecir_por_categoria(fecha_hasta=None, meses_historico=12, forzar=False):
     hoy = timezone.now().replace(tzinfo=None)
 
     if fecha_hasta:
-        fecha_hasta_dt = pd.to_datetime(fecha_hasta)
-        meses_diff = (fecha_hasta_dt.year - hoy.year) * 12 + (fecha_hasta_dt.month - hoy.month)
-        periodos = max(1, meses_diff)
+        fh = pd.Timestamp(fecha_hasta)
+        meses_diff = (fh.year - hoy.year) * 12 + (fh.month - hoy.month)
+        # +1 para cubrir el caso en que el modelo esté cacheado del mes anterior
+        periodos = max(1, meses_diff + 1)
+        fecha_hasta_period = pd.Timestamp(fh.year, fh.month, 1)
     else:
         periodos = 3
+        fecha_hasta_period = None
 
     if forzar or not modelo_vigente('prophet'):
         entrenar_y_guardar()
@@ -76,7 +79,7 @@ def predecir_por_categoria(fecha_hasta=None, meses_historico=12, forzar=False):
     resultado = {'historico': [], 'proyeccion': [], 'fecha_hasta': str(fecha_hasta or ''), 'meses_historico': meses_historico}
 
     # Inicio del mes actual: los meses anteriores son histórico, desde aquí es proyección
-    current_period = pd.Timestamp(hoy).to_period('M').to_timestamp()
+    current_period = pd.Timestamp(hoy.year, hoy.month, 1)
     # N meses completos anteriores al mes actual
     corte_historico = current_period - pd.DateOffset(months=meses_historico)
 
@@ -96,6 +99,7 @@ def predecir_por_categoria(fecha_hasta=None, meses_historico=12, forzar=False):
                 if fila['ds'] >= corte_historico:
                     resultado['historico'].append(entry)
             else:
-                resultado['proyeccion'].append(entry)
+                if fecha_hasta_period is None or fila['ds'] <= fecha_hasta_period:
+                    resultado['proyeccion'].append(entry)
 
     return resultado
