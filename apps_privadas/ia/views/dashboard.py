@@ -10,12 +10,18 @@ class DashboardVentasView(APIView):
     Devuelve ventas históricas reales + proyección por categoría (Prophet).
 
     Query params:
-      fecha_hasta — hasta qué fecha mostrar la proyección (YYYY-MM-DD).
-                    Sin este param proyecta 3 meses desde hoy.
+      fecha_hasta      — hasta qué fecha mostrar la proyección (YYYY-MM-DD).
+                         Sin este param proyecta 3 meses desde hoy.
+      meses_historico  — cuántos meses recientes mostrar en el gráfico (default: 12).
+                         El modelo siempre entrena con toodo el historial disponible.
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         fecha_hasta = request.query_params.get('fecha_hasta')
-        data = predecir_por_categoria(fecha_hasta=fecha_hasta)
+        meses_historico = int(request.query_params.get('meses_historico', 12))
+        data = predecir_por_categoria(
+            fecha_hasta=fecha_hasta,
+            meses_historico=meses_historico,
+        )
         return Response(data)

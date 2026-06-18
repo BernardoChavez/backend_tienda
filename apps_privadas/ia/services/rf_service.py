@@ -9,18 +9,18 @@ from apps_privadas.ia.services.modelo_store import modelo_vigente, guardar_model
 def _obtener_dataframe():
     detalles = (
         DetalleVenta.objects
-        .select_related('venta', 'variante__producto__categoria')
+        .select_related('venta', 'variante_producto__producto__categoria')
         .filter(venta__estado='completado')
         .values(
             'venta__fecha',
-            'variante__id',
-            'variante__sku',
-            'variante__precio',
-            'variante__cantidad',
-            'variante__limite_cantidad',
-            'variante__producto__nombre',
-            'variante__producto__categoria__nombre',
-            'variante__producto__categoria__id',
+            'variante_producto__id',
+            'variante_producto__sku',
+            'variante_producto__precio',
+            'variante_producto__cantidad',
+            'variante_producto__limite_cantidad',
+            'variante_producto__producto__nombre',
+            'variante_producto__producto__categoria__nombre',
+            'variante_producto__producto__categoria__id',
             'cantidad',
         )
     )
@@ -30,14 +30,14 @@ def _obtener_dataframe():
     df = pd.DataFrame(list(detalles))
     df.rename(columns={
         'venta__fecha': 'fecha',
-        'variante__id': 'variante_id',
-        'variante__sku': 'sku',
-        'variante__precio': 'precio',
-        'variante__cantidad': 'stock_actual',
-        'variante__limite_cantidad': 'limite_minimo',
-        'variante__producto__nombre': 'producto',
-        'variante__producto__categoria__nombre': 'categoria',
-        'variante__producto__categoria__id': 'categoria_id',
+        'variante_producto__id': 'variante_id',
+        'variante_producto__sku': 'sku',
+        'variante_producto__precio': 'precio',
+        'variante_producto__cantidad': 'stock_actual',
+        'variante_producto__limite_cantidad': 'limite_minimo',
+        'variante_producto__producto__nombre': 'producto',
+        'variante_producto__producto__categoria__nombre': 'categoria',
+        'variante_producto__producto__categoria__id': 'categoria_id',
         'cantidad': 'unidades',
     }, inplace=True)
     df['fecha'] = pd.to_datetime(df['fecha']).dt.tz_localize(None)

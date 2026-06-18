@@ -8,9 +8,9 @@ from apps_privadas.ia.services.modelo_store import modelo_vigente, guardar_model
 def _obtener_dataframe():
     detalles = (
         DetalleVenta.objects
-        .select_related('venta', 'variante__producto__categoria')
+        .select_related('venta', 'variante_producto__producto__categoria')
         .filter(venta__estado='completado')
-        .values('venta__fecha', 'variante__producto__categoria__nombre', 'cantidad')
+        .values('venta__fecha', 'variante_producto__producto__categoria__nombre', 'cantidad')
     )
     if not detalles:
         return None
@@ -18,7 +18,7 @@ def _obtener_dataframe():
     df = pd.DataFrame(list(detalles))
     df.rename(columns={
         'venta__fecha': 'fecha',
-        'variante__producto__categoria__nombre': 'categoria',
+        'variante_producto__producto__categoria__nombre': 'categoria',
     }, inplace=True)
     df['fecha'] = pd.to_datetime(df['fecha']).dt.tz_localize(None)
     df['periodo'] = df['fecha'].dt.to_period('M').dt.to_timestamp()
@@ -46,14 +46,16 @@ def entrenar_y_guardar():
     return len(df)
 
 
-def predecir_por_categoria(fecha_hasta=None, forzar=False):
+def predecir_por_categoria(fecha_hasta=None, meses_historico=12, forzar=False):
     """
     Modelo 1 — Prophet por categoría.
-    Carga el modelo desde disco si está vigente; si no, entrena primero.
+    Entrena con todoo el historial pero solo devuelve los últimos
+    `meses_historico` meses al frontend para mantener el gráfico legible.
 
-    fecha_hasta: fecha límite de la proyección (YYYY-MM-DD).
-                 Sin este param proyecta 3 meses desde hoy.
-    forzar:      True para reentrenar ignorando el caché.
+    fecha_hasta:     fecha límite de la proyección (YYYY-MM-DD).
+                     Sin este param proyecta 3 meses desde hoy.
+    meses_historico: cuántos meses recientes mostrar en el gráfico (default: 12).
+    forzar:          True para reentrenar ignorando el caché.
     """
     hoy = timezone.now().replace(tzinfo=None)
 
@@ -69,13 +71,17 @@ def predecir_por_categoria(fecha_hasta=None, forzar=False):
 
     modelos = cargar_modelo('prophet')
     if not modelos:
-        return {'historico': [], 'proyeccion': [], 'fecha_hasta': str(fecha_hasta or '')}
+        return {'historico': [], 'proyeccion': [], 'fecha_hasta': str(fecha_hasta or ''), 'meses_historico': meses_historico}
 
-    resultado = {'historico': [], 'proyeccion': [], 'fecha_hasta': str(fecha_hasta or '')}
+    resultado = {'historico': [], 'proyeccion': [], 'fecha_hasta': str(fecha_hasta or ''), 'meses_historico': meses_historico}
+
+    # Inicio del mes actual: los meses anteriores son histórico, desde aquí es proyección
+    current_period = pd.Timestamp(hoy).to_period('M').to_timestamp()
+    # N meses completos anteriores al mes actual
+    corte_historico = current_period - pd.DateOffset(months=meses_historico)
 
     for categoria, datos in modelos.items():
         modelo = datos['modelo']
-        ultimo_historico = datos['ultimo_historico']
 
         futuro = modelo.make_future_dataframe(periods=periodos, freq='MS')
         forecast = modelo.predict(futuro)
@@ -86,8 +92,9 @@ def predecir_por_categoria(fecha_hasta=None, forzar=False):
                 'periodo': fila['ds'].strftime('%Y-%m'),
                 'unidades': round(max(0, fila['yhat'])),
             }
-            if fila['ds'] <= ultimo_historico:
-                resultado['historico'].append(entry)
+            if fila['ds'] < current_period:
+                if fila['ds'] >= corte_historico:
+                    resultado['historico'].append(entry)
             else:
                 resultado['proyeccion'].append(entry)
 

@@ -25,11 +25,13 @@ class PrediccionDetalleView(APIView):
 
         crear_alertas_demanda_alta(predicciones)
 
+        dias_proyectados = predicciones[0]['dias_proyectados'] if predicciones else 30
+
         if solo_alerta:
             predicciones = [p for p in predicciones if p['alerta']]
 
         return Response({
-            'dias_proyectados': dias,
+            'dias_proyectados': dias_proyectados,
             'total': len(predicciones),
             'predicciones': predicciones,
         })
