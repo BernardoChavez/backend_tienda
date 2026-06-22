@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from apps_privadas.inventario.models import Producto
 from apps_privadas.notificaciones.models import Promocion
 from apps_privadas.notificaciones.serializers import (
+    ActualizarPromocionSerializer,
     CrearPromocionSerializer,
     PromocionSerializer,
 )
@@ -18,8 +19,10 @@ class PromocionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
+        if self.action == 'create':
             return CrearPromocionSerializer
+        if self.action in ['update', 'partial_update']:
+            return ActualizarPromocionSerializer
         return PromocionSerializer
 
     def create(self, request, *args, **kwargs):

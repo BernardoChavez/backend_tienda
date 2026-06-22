@@ -289,4 +289,5 @@ env/
 # ============================================================================
 # Descomentar y agregar archivos específicos si es necesario
 # /path/to/sensitive/file
+bootstrap_login.ps1
 

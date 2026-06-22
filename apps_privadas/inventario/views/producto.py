@@ -1,4 +1,3 @@
-from pgvector.django import CosineDistance
 from apps_privadas.inventario.views.base import BaseViewSet
 from rest_framework import status, filters
 
@@ -13,6 +12,20 @@ from apps_privadas.inventario.serializers import (
 )
 from apps_privadas.inventario.cloudinary_service import CloudinaryService
 from apps_privadas.inventario.services.embedding_client import generar_embedding_sync
+
+
+def cosine_distance(left, right):
+    if not left or not right or len(left) != len(right):
+        return None
+
+    dot = sum(a * b for a, b in zip(left, right))
+    left_norm = sum(a * a for a in left) ** 0.5
+    right_norm = sum(b * b for b in right) ** 0.5
+
+    if not left_norm or not right_norm:
+        return None
+
+    return 1 - (dot / (left_norm * right_norm))
 
 
 class ProductoViewSet(BaseViewSet):
@@ -112,14 +125,17 @@ class ProductoViewSet(BaseViewSet):
 
         umbral = float(request.query_params.get('umbral', 0.5))
 
-        similares = Producto.objects.select_related('categoria', 'marca') \
+        candidatos = Producto.objects.select_related('categoria', 'marca') \
             .exclude(id=producto.id) \
-            .filter(embedding__isnull=False, activo=True) \
-            .annotate(
-                _distancia=CosineDistance('embedding', producto.embedding)
-            ) \
-            .filter(_distancia__lt=umbral) \
-            .order_by('_distancia')[:10]
+            .filter(embedding__isnull=False, activo=True)
+
+        similares = []
+        for candidato in candidatos:
+            distancia = cosine_distance(producto.embedding, candidato.embedding)
+            if distancia is not None and distancia < umbral:
+                similares.append((distancia, candidato))
+
+        similares = [producto for _, producto in sorted(similares, key=lambda item: item[0])[:10]]
 
         return Response(
             ProductoSerializer(similares, many=True).data

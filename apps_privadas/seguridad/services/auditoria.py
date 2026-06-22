@@ -9,6 +9,7 @@ def registrar_bitacora(
     entidad,
     accion,
     detalles='',
+    usuario_username=None,
     metodo=None,
     ruta=None,
     ip_cliente=None,
@@ -19,6 +20,7 @@ def registrar_bitacora(
     detalles = str(detalles or '')[:500]
     entidad = str(entidad or 'sistema')[:100]
     accion = str(accion or 'ACCION')[:100]
+    usuario_username = str(usuario_username or '')[:150] or None
 
     try:
         return BitacoraAuditoria.objects.create(
@@ -28,6 +30,7 @@ def registrar_bitacora(
             detalles=detalles,
             accion=accion,
             usuarios_id=usuario_id or 0,
+            usuario_username=usuario_username,
             metodo=(metodo or '')[:10] or None,
             ruta=(ruta or '')[:255] or None,
             ip_cliente=ip_cliente,

@@ -16,6 +16,7 @@ class BitacoraAuditoriaSerializer(serializers.ModelSerializer):
             'detalles',
             'accion',
             'usuarios_id',
+            'usuario_username',
             'metodo',
             'ruta',
             'ip_cliente',

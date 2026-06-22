@@ -1,39 +1,47 @@
 #!/usr/bin/env python
 """
-Script para crear un nuevo tenant (esquema y empresa) en django-tenants
-Uso: python manage.py shell < create_tenant.py
-O: python create_tenant.py
+Script para crear o reutilizar el tenant Tienda Amiga.
+
+Uso:
+    python create_tenant.py
 """
 
 import os
 import django
 
-# Configurar Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend_tienda.settings')
 django.setup()
 
-from apps_publicas.empresas.models import Empresa, Dominio
+from apps_publicas.empresas.models import Dominio, Empresa
 
-# Crear la empresa "Tienda Amiga"
-empresa = Empresa.objects.create(
-    nombre='Tienda Amiga',
-    schema_name='tienda_amiga',  # django-tenants usa schema_name
-    correo='info@tienda-amiga.com',
-    is_active=True
+
+empresa, creada = Empresa.objects.get_or_create(
+    schema_name='tienda_amiga',
+    defaults={
+        'nombre': 'Tienda Amiga',
+        'correo': 'info@tienda-amiga.com',
+        'is_active': True,
+    },
 )
 
-print(f"[OK] Empresa creada: {empresa.nombre} (ID: {empresa.id})")
+if creada:
+    print(f"[OK] Empresa creada: {empresa.nombre} (ID: {empresa.id})")
+else:
+    print(f"[OK] Empresa existente: {empresa.nombre} (ID: {empresa.id})")
 print(f"  Schema: {empresa.schema_name}")
 
-# Crear el dominio para la empresa
-dominio = Dominio.objects.create(
+dominio, dominio_creado = Dominio.objects.get_or_create(
     domain='tienda-amiga.localhost',
-    tenant=empresa,
-    is_primary=True
+    defaults={
+        'tenant': empresa,
+        'is_primary': True,
+    },
 )
 
-print(f"[OK] Dominio creado: {dominio.domain}")
-print(f"\nTienda Amiga está lista para usar en: http://tienda-amiga.localhost")
+if not dominio_creado and dominio.tenant_id != empresa.id:
+    dominio.tenant = empresa
+    dominio.is_primary = True
+    dominio.save(update_fields=['tenant', 'is_primary'])
 
-
-
+print(f"[OK] Dominio {'creado' if dominio_creado else 'existente'}: {dominio.domain}")
+print("\nTienda Amiga esta lista para usar en: http://tienda-amiga.localhost")

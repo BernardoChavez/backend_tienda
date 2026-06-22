@@ -1,6 +1,6 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.conf import settings
 
@@ -15,6 +15,11 @@ from apps_privadas.notificaciones.services import NotificacionService
 class NotificacionViewSet(viewsets.ModelViewSet):
     serializer_class = NotificacionSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['vapid_public_key', 'vapid_public_key_alias']:
+            return [AllowAny()]
+        return super().get_permissions()
 
     def get_queryset(self):
         queryset = Notificacion.objects.select_related('usuario', 'ultima_promocion')
@@ -60,9 +65,44 @@ class NotificacionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='vapid-public-key')
     def vapid_public_key(self, request):
+        estado = NotificacionService.estado_configuracion()
+        public_key = getattr(settings, 'VAPID_PUBLIC_KEY', '')
         return Response(
             {
-                'public_key': getattr(settings, 'VAPID_PUBLIC_KEY', ''),
+                'public_key': public_key,
+                'publicKey': public_key,
+                'vapid_public_key': public_key,
+                'vapidPublicKey': public_key,
+                **estado,
             },
             status=status.HTTP_200_OK,
         )
+
+    @action(detail=False, methods=['get'], url_path='vapid_public_key')
+    def vapid_public_key_alias(self, request):
+        return self.vapid_public_key(request)
+
+    @action(detail=False, methods=['get'])
+    def configuracion(self, request):
+        suscripciones_activas = Notificacion.objects.filter(
+            usuario=request.user,
+            activa=True,
+        ).count()
+
+        return Response(
+            {
+                **NotificacionService.estado_configuracion(),
+                'suscripciones_activas_usuario': suscripciones_activas,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=['post'])
+    def probar(self, request):
+        resultado = NotificacionService.enviar_prueba(
+            usuario=request.user,
+            titulo=request.data.get('titulo', 'Notificacion de prueba'),
+            mensaje=request.data.get('mensaje', 'Las notificaciones push estan funcionando.'),
+        )
+        http_status = status.HTTP_200_OK if resultado['success'] else status.HTTP_400_BAD_REQUEST
+        return Response(resultado, status=http_status)

@@ -81,7 +81,7 @@ AUTH_USER_MODEL = 'seguridad.Usuario'
 # Configuración de Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'apps_privadas.seguridad.authentication.TenantJWTAuthentication',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,  # 10 resultados por página
@@ -219,6 +219,9 @@ CORS_ALLOW_ALL_ORIGINS = True  # Solo en desarrollo
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-tenant',
+    'cache-control',
+    'pragma',
+    'expires',
 ]
 
 # Para producción, cambiar a:
