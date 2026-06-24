@@ -1,19 +1,17 @@
 from django.utils.deprecation import MiddlewareMixin
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from apps_privadas.seguridad.authentication import TenantJWTAuthentication
 from apps_privadas.seguridad.services.auditoria import registrar_bitacora
 
 
 class AuditoriaMiddleware(MiddlewareMixin):
-    """Registra automaticamente las acciones realizadas por usuario."""
+    """Registra automaticamente las acciones realizadas contra la API."""
 
     EXCLUDED_PREFIXES = (
         '/api/schema/',
         '/api/docs/',
         '/api/redoc/',
         '/api/login/',
-        '/admin/jsi18n/',
-        '/static/',
     )
 
     ACTION_BY_METHOD = {
@@ -28,14 +26,13 @@ class AuditoriaMiddleware(MiddlewareMixin):
         if not self._should_audit(request):
             return response
 
-        usuario = self._get_usuario(request)
+        usuario_id = self._get_usuario_id(request)
         accion = self._get_accion(request)
         entidad = self._get_entidad(request)
         detalles = self._get_detalles(request, response)
 
         registrar_bitacora(
-            usuario_id=getattr(usuario, 'id', 0) if usuario else 0,
-            usuario_username=getattr(usuario, 'username', None) if usuario else None,
+            usuario_id=usuario_id,
             entidad=entidad,
             accion=accion,
             detalles=detalles,
@@ -47,46 +44,39 @@ class AuditoriaMiddleware(MiddlewareMixin):
         return response
 
     def _should_audit(self, request):
-        if not request.path.startswith('/api/') and not request.path.startswith('/admin/'):
+        if not request.path.startswith('/api/'):
             return False
         if request.method in ['OPTIONS', 'HEAD']:
             return False
         return not any(request.path.startswith(prefix) for prefix in self.EXCLUDED_PREFIXES)
 
-    def _get_usuario(self, request):
+    def _get_usuario_id(self, request):
         user = getattr(request, 'user', None)
         if user and getattr(user, 'is_authenticated', False):
-            return user
+            return user.id
 
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
         if not auth_header.lower().startswith('bearer '):
-            return None
+            return 0
 
         try:
-            jwt_auth = TenantJWTAuthentication()
+            jwt_auth = JWTAuthentication()
             raw_token = auth_header.split(' ', 1)[1].strip()
             validated_token = jwt_auth.get_validated_token(raw_token)
-            return jwt_auth.get_user(validated_token)
+            user = jwt_auth.get_user(validated_token)
+            return user.id if user else 0
         except Exception:
-            return None
+            return 0
 
     def _get_accion(self, request):
         path = request.path.strip('/').lower()
         if path.endswith('login'):
             return 'LOGIN'
-        if path.startswith('admin/logout'):
-            return 'LOGOUT'
         if 'recuperar-password' in path:
             return 'RECUPERAR_PASSWORD'
         return self.ACTION_BY_METHOD.get(request.method, request.method)
 
     def _get_entidad(self, request):
-        if request.path.startswith('/admin/'):
-            partes = [parte for parte in request.path.strip('/').split('/') if parte]
-            if len(partes) >= 3:
-                return f"admin.{partes[1]}.{partes[2]}"[:100]
-            return 'admin'
-
         resolver_match = getattr(request, 'resolver_match', None)
         if resolver_match and resolver_match.view_name:
             return resolver_match.view_name[:100]

@@ -3,7 +3,6 @@ from apps_privadas.notificaciones.serializers.notificacion import (
     SuscribirNotificacionSerializer,
 )
 from apps_privadas.notificaciones.serializers.promocion import (
-    ActualizarPromocionSerializer,
     CrearPromocionSerializer,
     PromocionSerializer,
 )
@@ -11,7 +10,6 @@ from apps_privadas.notificaciones.serializers.promocion import (
 __all__ = [
     'NotificacionSerializer',
     'SuscribirNotificacionSerializer',
-    'ActualizarPromocionSerializer',
     'CrearPromocionSerializer',
     'PromocionSerializer',
 ]

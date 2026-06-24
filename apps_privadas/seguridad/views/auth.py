@@ -4,7 +4,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import Permission
-from django.db import connection
 
 from apps_privadas.seguridad.serializers.login import LoginSerializer
 from apps_privadas.seguridad.serializers.recuperacion import (
@@ -58,13 +57,10 @@ def login(request):
 
     if serializer.is_valid():
         usuario = serializer.validated_data['usuario']
-        tenant_schema = getattr(connection, 'schema_name', None)
 
         # Generar tokens JWT (sin agregar datos, se mantienen cortos y seguros)
         refresh = RefreshToken.for_user(usuario)
-        refresh['tenant_schema'] = tenant_schema
         access = refresh.access_token
-        access['tenant_schema'] = tenant_schema
 
         # Obtener roles del usuario
         roles = list(usuario.groups.values_list('name', flat=True))
@@ -95,7 +91,6 @@ def login(request):
 
         registrar_bitacora(
             usuario_id=usuario.id,
-            usuario_username=usuario.username,
             entidad='seguridad.login',
             accion='LOGIN',
             detalles=f"Login exitoso para usuario {usuario.username}",
@@ -112,7 +107,6 @@ def login(request):
             'usuario_id': usuario.id,
             'username': usuario.username,
             'nombre_completo': usuario.nombre_completo,
-            'tenant_schema': tenant_schema,
             'is_superuser': usuario.is_superuser,
             'roles': roles,
             'permisos': permisos
@@ -121,7 +115,6 @@ def login(request):
     print(f"ERROR Login fallido: {serializer.errors}")
     registrar_bitacora(
         usuario_id=0,
-        usuario_username=request.data.get('username', ''),
         entidad='seguridad.login',
         accion='LOGIN_FALLIDO',
         detalles=f"Login fallido para usuario {request.data.get('username', '')}",
