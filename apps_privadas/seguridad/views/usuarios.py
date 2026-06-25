@@ -178,7 +178,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             password=serializer.validated_data['password'],
             nombre=serializer.validated_data['nombre'],
             apellido=serializer.validated_data['apellido'],
-            fecha_nacimiento=serializer.validated_data['fecha_nacimiento']
+            fecha_nacimiento=serializer.validated_data['fecha_nacimiento'],
+            email=serializer.validated_data.get('email', '')
         )
 
         if resultado['success']:

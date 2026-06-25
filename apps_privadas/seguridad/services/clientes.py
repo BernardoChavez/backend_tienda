@@ -7,7 +7,7 @@ class ClienteService:
     """Servicio para registro de clientes"""
 
     @staticmethod
-    def registrar_cliente(username, password, nombre, apellido, fecha_nacimiento):
+    def registrar_cliente(username, password, nombre, apellido, fecha_nacimiento, email=''):
         """
         Registra un nuevo cliente.
         El grupo sera automaticamente "Cliente".
@@ -52,7 +52,8 @@ class ClienteService:
                 password=password,
                 nombre=nombre,
                 apellido=apellido,
-                fecha_nacimiento=fecha_nacimiento
+                fecha_nacimiento=fecha_nacimiento,
+                email=email
             )
 
             # Asignar al grupo Cliente

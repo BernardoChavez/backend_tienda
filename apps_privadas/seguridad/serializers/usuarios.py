@@ -51,6 +51,7 @@ class RegistrarClienteSerializer(serializers.Serializer):
     nombre = serializers.CharField(max_length=100)
     apellido = serializers.CharField(max_length=100)
     fecha_nacimiento = serializers.DateField()
+    email = serializers.EmailField(required=False, allow_blank=True, default='')
 
     def validate_username(self, value):
         """Validar que username sea unico (solo en usuarios activos)"""
