@@ -220,11 +220,6 @@ class Command(BaseCommand):
                 obj.save()
             result.append(obj)
 
-        # Usar superusuario si existe, para no requerir admin creado
-        admin = Usuario.objects.filter(is_superuser=True).first()
-        if admin and admin not in result:
-            result.append(admin)
-
         return result
 
     def _crear_productos(self, categorias, marcas):
