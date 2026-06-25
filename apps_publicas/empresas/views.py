@@ -8,6 +8,7 @@ from apps_publicas.empresas.models import Empresa, Dominio, Plan, Suscripcion
 from apps_publicas.empresas.serializers import (
     EmpresaRegistroSerializer,
     EmpresaCreatedSerializer,
+    EmpresaPanelSerializer,
     PlanSerializer,
     SuscripcionSerializer,
     SuscripcionCambioSerializer,
@@ -19,7 +20,7 @@ from apps_publicas.empresas.services import (
     SuscripcionService,
     SuscripcionCambioService,
 )
-from apps_privadas.seguridad.permissions import HasModelPermission
+from apps_privadas.seguridad.permissions import HasModelPermission, IsAdminUser
 
 
 class EmpresaViewSet(viewsets.ModelViewSet):
@@ -138,6 +139,20 @@ class EmpresaViewSet(viewsets.ModelViewSet):
         """
         empresas = EmpresaListaService.obtener_todas_empresas()
         return Response(empresas, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsAdminUser])
+    def panel(self, request):
+        """
+        Lista todas las empresas (excepto public) con su suscripción activa.
+        Solo accesible para superusuarios del schema público.
+        """
+        queryset = EmpresaListaService.listar_panel()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = EmpresaPanelSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = EmpresaPanelSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def retrieve(self, request, pk=None):
         """

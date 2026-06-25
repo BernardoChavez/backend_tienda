@@ -140,3 +140,52 @@ class SuscripcionCambioSerializer(serializers.ModelSerializer):
             'cambiado_en',
             'motivo',
         ]
+
+
+class EmpresaPanelSerializer(serializers.ModelSerializer):
+    subdominio = serializers.SerializerMethodField()
+    suscripcion_actual = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Empresa
+        fields = [
+            'id',
+            'nombre',
+            'correo',
+            'subdominio',
+            'is_active',
+            'fecha_creacion',
+            'suscripcion_actual',
+        ]
+
+    def get_subdominio(self, obj):
+        dominio = Dominio.objects.filter(tenant=obj, is_primary=True).first()
+        return dominio.domain if dominio else None
+
+    def get_suscripcion_actual(self, obj):
+        suscripcion = (
+            obj.suscripciones
+            .select_related('plan')
+            .filter(estado__in=['activa', 'trial'])
+            .order_by('-fecha_creacion')
+            .first()
+        ) or (
+            obj.suscripciones
+            .select_related('plan')
+            .order_by('-fecha_creacion')
+            .first()
+        )
+        if not suscripcion:
+            return None
+        return {
+            'plan_nombre': suscripcion.plan.nombre,
+            'plan_precio': (
+                suscripcion.plan.precio_anual
+                if suscripcion.ciclo == 'anual'
+                else suscripcion.plan.precio_mensual
+            ),
+            'estado': suscripcion.estado,
+            'ciclo': suscripcion.ciclo,
+            'fecha_inicio': suscripcion.fecha_inicio,
+            'fecha_fin': suscripcion.fecha_fin,
+        }

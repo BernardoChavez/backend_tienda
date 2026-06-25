@@ -274,6 +274,16 @@ class EmpresaListaService:
         return list(empresas)
 
     @staticmethod
+    def listar_panel():
+        """Retorna todas las empresas (excepto public) con su suscripción actual."""
+        return (
+            Empresa.objects
+            .exclude(schema_name='public')
+            .prefetch_related('suscripciones__plan')
+            .order_by('nombre')
+        )
+
+    @staticmethod
     def obtener_empresa_por_id(empresa_id):
         """Obtiene una empresa específica"""
         try:
