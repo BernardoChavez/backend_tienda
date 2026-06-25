@@ -28,6 +28,11 @@ from apps_privadas.inventario.serializers.producto_favorito import (
     ProductoFavoritoSerializer,
     CrearProductoFavoritoSerializer,
 )
+from apps_privadas.inventario.serializers.resena import (
+    ResenaSerializer,
+    CrearResenaSerializer,
+    ActualizarResenaSerializer,
+)
 
 __all__ = [
     'CategoriaSerializer',
@@ -48,4 +53,7 @@ __all__ = [
     'MultimedioConArchivoSerializer',
     'ProductoFavoritoSerializer',
     'CrearProductoFavoritoSerializer',
+    'ResenaSerializer',
+    'CrearResenaSerializer',
+    'ActualizarResenaSerializer',
 ]

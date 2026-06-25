@@ -4,6 +4,7 @@ from apps_privadas.inventario.models.producto import Producto
 from apps_privadas.inventario.models.variante_producto import VarianteProducto
 from apps_privadas.inventario.models.multimedia import Multimedio
 from apps_privadas.inventario.models.producto_favorito import ProductoFavorito
+from apps_privadas.inventario.models.resena import Resena
 
 __all__ = [
     'Categoria',
@@ -12,4 +13,5 @@ __all__ = [
     'VarianteProducto',
     'Multimedio',
     'ProductoFavorito',
+    'Resena',
 ]

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps_privadas.inventario.models import Producto, Categoria, Multimedio, Marca, VarianteProducto
-from django.db.models import Min
+from django.db.models import Min, Avg
 
 
 
@@ -18,14 +18,16 @@ class ProductoSerializer(serializers.ModelSerializer):
 
     precio_minimo = serializers.SerializerMethodField()
     imagen_principal = serializers.SerializerMethodField()
-
+    calificacion_promedio = serializers.SerializerMethodField()
+    total_resenas = serializers.SerializerMethodField()
 
     class Meta:
         model = Producto
         fields = [
             'id', 'nombre', 'descripcion', 'activo',
             'categoria', 'categoria_nombre', 'marca', 'marca_nombre',
-            'imagenes', 'modelos_3d', 'precio_minimo', 'imagen_principal'
+            'imagenes', 'modelos_3d', 'precio_minimo', 'imagen_principal',
+            'calificacion_promedio', 'total_resenas',
         ]
         read_only_fields = ['id']
 
@@ -44,13 +46,20 @@ class ProductoSerializer(serializers.ModelSerializer):
         return min_precio or 0
 
     def get_imagen_principal(self, obj):
-        # Obtener la imagen marcada como principal
         img = Multimedio.objects.filter(producto=obj, tipo='imagen', es_principal=True).first()
         if not img:
-            # Si no hay principal, agarrar la primera que haya
             img = Multimedio.objects.filter(producto=obj, tipo='imagen').first()
-        
         return img.archivo_url if img else None
+
+    def get_calificacion_promedio(self, obj):
+        from apps_privadas.inventario.models.resena import Resena
+        resultado = Resena.objects.filter(producto=obj).aggregate(promedio=Avg('calificacion'))
+        promedio = resultado['promedio']
+        return round(promedio, 1) if promedio is not None else None
+
+    def get_total_resenas(self, obj):
+        from apps_privadas.inventario.models.resena import Resena
+        return Resena.objects.filter(producto=obj).count()
 
 
 
