@@ -27,6 +27,17 @@ class Usuario(AbstractUser):
         ordering = ['-date_joined']
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'
+        permissions = [
+            ('view_dashboard', 'Puede ver el dashboard'),
+            ('view_backup', 'Puede ver backup y restore'),
+            ('add_backup', 'Puede hacer backup'),
+            ('add_restore', 'Puede hacer restore'),
+            ('add_reporte', 'Puede realizar reportes'),
+            ('add_prediccion', 'Puede realizar predicciones'),
+            ('change_empresa', 'Puede configurar la empresa'),
+            ('view_mi_suscripcion', 'Puede ver la suscripcion'),
+            ('change_mi_suscripcion', 'Puede cambiar la suscripcion'),
+        ]
 
     def __str__(self):
         return f"{self.nombre} {self.apellido} ({self.username})" if self.nombre else self.username
