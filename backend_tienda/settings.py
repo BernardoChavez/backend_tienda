@@ -219,6 +219,11 @@ CORS_ALLOW_ALL_ORIGINS = True  # Solo en desarrollo
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-tenant',
+    'cache-control',
+    'pragma',
+    'expires',
+    'if-modified-since',
+    'if-none-match',
 ]
 
 # Para producción, cambiar a:
