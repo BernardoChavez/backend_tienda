@@ -6,6 +6,7 @@ from apps_privadas.seguridad.models.bitacora_auditoria import BitacoraAuditoria
 def registrar_bitacora(
     *,
     usuario_id,
+    usuario_username=None,
     entidad,
     accion,
     detalles='',
@@ -28,6 +29,7 @@ def registrar_bitacora(
             detalles=detalles,
             accion=accion,
             usuarios_id=usuario_id or 0,
+            usuario_username=(usuario_username or '')[:150] or None,
             metodo=(metodo or '')[:10] or None,
             ruta=(ruta or '')[:255] or None,
             ip_cliente=ip_cliente,

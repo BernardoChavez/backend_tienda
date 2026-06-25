@@ -91,6 +91,7 @@ def login(request):
 
         registrar_bitacora(
             usuario_id=usuario.id,
+            usuario_username=usuario.username,
             entidad='seguridad.login',
             accion='LOGIN',
             detalles=f"Login exitoso para usuario {usuario.username}",

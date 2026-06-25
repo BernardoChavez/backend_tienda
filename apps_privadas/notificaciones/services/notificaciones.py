@@ -71,6 +71,7 @@ class NotificacionService:
 
         registrar_bitacora(
             usuario_id=getattr(usuario, 'id', 0),
+            usuario_username=getattr(usuario, 'username', None),
             entidad='notificaciones.promocion',
             accion='PUBLICAR_PROMOCION',
             detalles=(
@@ -94,7 +95,75 @@ class NotificacionService:
         }
 
     @staticmethod
+    def enviar_prueba(usuario, titulo='Notificacion de prueba', mensaje='Las notificaciones push estan funcionando.'):
+        suscripciones = Notificacion.objects.filter(usuario=usuario, activa=True)
+        enviadas = 0
+        fallidas = 0
+        errores = []
+
+        payload = {
+            'title': titulo,
+            'body': mensaje,
+            'url': '/',
+            'tipo': 'prueba',
+        }
+
+        for notificacion in suscripciones:
+            ok, error = NotificacionService._enviar_payload(notificacion, payload)
+            notificacion.ultimo_envio = timezone.now()
+            notificacion.ultimo_error = error or ''
+
+            if ok:
+                enviadas += 1
+            else:
+                fallidas += 1
+                errores.append(error)
+                if NotificacionService._debe_desactivar(error):
+                    notificacion.activa = False
+
+            notificacion.save(update_fields=[
+                'ultimo_envio',
+                'ultimo_error',
+                'activa',
+                'fecha_actualizacion',
+            ])
+
+        mensaje = 'Notificacion de prueba enviada.'
+        if not suscripciones.exists():
+            mensaje = 'El usuario no tiene suscripciones push activas.'
+        elif fallidas:
+            mensaje = 'No se pudieron enviar todas las notificaciones.'
+
+        return {
+            'success': fallidas == 0 and suscripciones.exists(),
+            'suscripciones_activas': suscripciones.count(),
+            'enviadas': enviadas,
+            'fallidas': fallidas,
+            'errores': errores,
+            'mensaje': mensaje,
+        }
+
+    @staticmethod
+    def estado_configuracion():
+        return {
+            'vapid_public_key_configurada': bool(getattr(settings, 'VAPID_PUBLIC_KEY', '')),
+            'vapid_private_key_configurada': bool(getattr(settings, 'VAPID_PRIVATE_KEY', '')),
+            'vapid_admin_email_configurado': bool(getattr(settings, 'VAPID_ADMIN_EMAIL', '')),
+        }
+
+    @staticmethod
     def _enviar_push(notificacion, promocion):
+        payload = {
+            'title': f"Nueva oferta: {promocion.titulo}",
+            'body': promocion.descripcion or f"Oferta disponible en {promocion.producto.nombre}",
+            'url': f"/promociones/{promocion.id}",
+            'promocion_id': promocion.id,
+            'producto_id': promocion.producto_id,
+        }
+        return NotificacionService._enviar_payload(notificacion, payload)
+
+    @staticmethod
+    def _enviar_payload(notificacion, payload):
         vapid_private_key = getattr(settings, 'VAPID_PRIVATE_KEY', '')
         vapid_admin_email = getattr(settings, 'VAPID_ADMIN_EMAIL', '')
 
@@ -105,14 +174,6 @@ class NotificacionService:
             from pywebpush import webpush, WebPushException
         except ImportError:
             return False, 'pywebpush no esta instalado.'
-
-        payload = {
-            'title': f"Nueva oferta: {promocion.titulo}",
-            'body': promocion.descripcion or f"Oferta disponible en {promocion.producto.nombre}",
-            'url': f"/promociones/{promocion.id}",
-            'promocion_id': promocion.id,
-            'producto_id': promocion.producto_id,
-        }
 
         subscription_info = {
             'endpoint': notificacion.endpoint,
@@ -128,6 +189,7 @@ class NotificacionService:
                 data=json.dumps(payload),
                 vapid_private_key=vapid_private_key,
                 vapid_claims={'sub': f"mailto:{vapid_admin_email}"},
+                ttl=60 * 60,
             )
             return True, ''
         except WebPushException as exc:
